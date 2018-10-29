@@ -1,0 +1,11 @@
+.*{
+	padding: 0px;
+	margin: 0px;
+}
+
+
+.gamebox{
+	position: absolute;
+	border: solid black 3px;
+	
+}
