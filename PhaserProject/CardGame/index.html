@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8" />
+    <title> Phaser 3 Game </title>
+    <!-- <script src="js/phaser.min.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+var config = {
+    type: Phaser.AUTO,
+    backgroundColor: "#192a56",
+    width: 1280,
+    height: 720,
+    scene: {
+        preload: preload,
+        create: create
+    }
+};
+
+const cardResourse = [
+    {key : "10_of_clubs", path : "assets/10_of_clubs.png", value : 10},
+    {key : "10_of_diamonds", path : "assets/10_of_diamonds.png", value : 10},
+    {key : "10_of_hearts", path : "assets/10_of_hearts.png", value : 10},
+    {key : "10_of_spades", path : "assets/10_of_spades.png", value : 10},
+    {key : "2_of_clubs", path : "assets/2_of_clubs.png", value : 2},
+    {key : "2_of_diamonds", path : "assets/2_of_diamonds.png", value : 2},
+    {key : "2_of_hearts", path : "assets/2_of_hearts.png", value : 2},
+    {key : "2_of_spades", path : "assets/2_of_spades.png", value : 2},
+    {key : "3_of_clubs", path : "assets/3_of_clubs.png", value : 3},
+    {key : "3_of_diamonds", path : "assets/3_of_diamonds.png", value : 3},
+    {key : "3_of_hearts", path : "assets/3_of_hearts.png", value : 3},
+    {key : "3_of_spades", path : "assets/3_of_spades.png", value : 3},
+    {key : "4_of_clubs", path : "assets/4_of_clubs.png", value : 4},
+    {key : "4_of_diamonds", path : "assets/4_of_diamonds.png", value : 4},
+    {key : "4_of_hearts", path : "assets/4_of_hearts.png", value : 4},
+    {key : "4_of_spades", path : "assets/4_of_spades.png", value : 4},
+    {key : "5_of_clubs", path : "assets/5_of_clubs.png", value : 5},
+    {key : "5_of_diamonds", path : "assets/5_of_diamonds.png", value : 5},
+    {key : "5_of_hearts", path : "assets/5_of_hearts.png", value : 5},
+    {key : "5_of_spades", path : "assets/5_of_spades.png", value : 5},
+    {key : "6_of_clubs", path : "assets/6_of_clubs.png", value : 6},
+    {key : "6_of_diamonds", path : "assets/6_of_diamonds.png", value : 6},
+    {key : "6_of_hearts", path : "assets/6_of_hearts.png", value : 6},
+    {key : "6_of_spades", path : "assets/6_of_spades.png", value : 6},
+    {key : "7_of_clubs", path : "assets/7_of_clubs.png", value : 7},
+    {key : "7_of_diamonds", path : "assets/7_of_diamonds.png", value : 7},
+    {key : "7_of_hearts", path : "assets/7_of_hearts.png", value : 7},
+    {key : "7_of_spades", path : "assets/7_of_spades.png", value : 7},
+    {key : "8_of_clubs", path : "assets/8_of_clubs.png", value : 8},
+    {key : "8_of_diamonds", path : "assets/8_of_diamonds.png", value : 8},
+    {key : "8_of_hearts", path : "assets/8_of_hearts.png", value : 8},
+    {key : "8_of_spades", path : "assets/8_of_spades.png", value : 8},
+    {key : "9_of_clubs", path : "assets/9_of_clubs.png", value : 9},
+    {key : "9_of_diamonds", path : "assets/9_of_diamonds.png", value : 9},
+    {key : "9_of_hearts", path : "assets/9_of_hearts.png", value : 9},
+    {key : "9_of_spades", path : "assets/9_of_spades.png", value : 9},
+    {key : "ace_of_clubs", path : "assets/ace_of_clubs.png", value : 21},
+    {key : "ace_of_diamonds", path : "assets/ace_of_diamonds.png", value : 21},
+    {key : "ace_of_hearts", path : "assets/ace_of_hearts.png", value : 21},
+    {key : "ace_of_spades", path : "assets/ace_of_spades.png", value : 21},
+    {key : "black_joker", path : "assets/black_joker.png", value : 98},
+    {key : "jack_of_clubs", path : "assets/jack_of_clubs.png", value : 11},
+    {key : "jack_of_diamonds", path : "assets/jack_of_diamonds.png", value : 11},
+    {key : "jack_of_hearts", path : "assets/jack_of_hearts.png", value : 11},
+    {key : "jack_of_spades", path : "assets/jack_of_spades.png", value : 11},
+    {key : "king_of_clubs", path : "assets/king_of_clubs.png", value : 13},
+    {key : "king_of_diamonds", path : "assets/king_of_diamonds.png", value : 13},
+    {key : "king_of_hearts", path : "assets/king_of_hearts.png", value : 13},
+    {key : "king_of_spades", path : "assets/king_of_spades.png", value : 13},
+    {key : "queen_of_clubs", path : "assets/queen_of_clubs.png", value : 12},
+    {key : "queen_of_diamonds", path : "assets/queen_of_diamonds.png", value : 12},
+    {key : "queen_of_hearts", path : "assets/queen_of_hearts.png", value : 12},
+    {key : "queen_of_spades", path : "assets/queen_of_spades.png", value : 12},
+    {key : "red_joker", path : "assets/red_joker.png", value : 99}
+];
+
+// デッキのフィルド
+const deckField = {
+    x : 1100,
+    y : 100,
+    width : 100,
+    height : 145,
+}
+
+// 出したカードのフィールド
+const usedCardField = {
+    x : 200,
+    y : 100,
+    width : 800,
+    height : 300,
+}
+//  最新カードフィルド
+const lastUsedCardField = {
+    x : 50,
+    y : 100,
+    width : 100,
+    height : 145,
+}
+
+//手札カードフィルド
+const myCardField = {
+    x : 200,
+    y : 500,
+    width : 200,
+    height : 145,
+}
+
+var lastUsedCard = null; // 最後に出したカード
+let deckData = []; // デッキのカードを格納する配列
+var deckCards = []; // カードの配列
+var usedCards = []; // 出したカードの配列
+var myCards = []; // 手札のカードを格納する配列
+var gameOver = false;
+var game = new Phaser.Game(config);
+
+function preload ()
+{
+    //カードの正面
+    cardResourse.forEach((card) => {
+        this.load.image(card.key, card.path);
+    });
+
+    //カードの裏面
+    this.load.image("card_back_blue", "assets/card_back_blue.png");
+    this.load.image("card_back_green", "assets/card_back_green.png");
+
+}
+
+function create ()
+{
+    // デッキのフィールドを作成
+    const deckGraphics = this.add.graphics();
+
+    // フィールドのデザインを設定
+    deckGraphics.fillStyle(0x008000, 0.5); // 緑色（RGBAで50%の透明度）
+    deckGraphics.fillRect(
+        deckField.x,
+        deckField.y,
+        deckField.width,
+        deckField.height
+    );
+
+    // フィールドの境界線を描画（任意）
+    deckGraphics.lineStyle(2, 0x000000, 1); // 黒い線
+    deckGraphics.strokeRect(
+        deckField.x,
+        deckField.y,
+        deckField.width,
+        deckField.height
+    );
+
+    // フィールドを作成
+    const fieldGraphics = this.add.graphics();
+
+    // フィールドのデザインを設定
+    fieldGraphics.fillStyle(0x008000, 0.5); // 緑色（RGBAで50%の透明度）
+    fieldGraphics.fillRect(
+        usedCardField.x,
+        usedCardField.y,
+        usedCardField.width,
+        usedCardField.height
+    );
+
+    // フィールドの境界線を描画（任意）
+    fieldGraphics.lineStyle(2, 0x000000, 1); // 黒い線
+    fieldGraphics.strokeRect(
+        usedCardField.x,
+        usedCardField.y,
+        usedCardField.width,
+        usedCardField.height
+    );
+
+
+    // 最後に出したカードのフィールドを作成
+    const lastUsedCardFieldGraphics = this.add.graphics();
+
+    // フィールドのデザインを設定
+    lastUsedCardFieldGraphics.fillStyle(0x008000, 0.5); // 緑色（RGBAで50%の透明度）
+    lastUsedCardFieldGraphics.fillRect(
+        lastUsedCardField.x,
+        lastUsedCardField.y,
+        lastUsedCardField.width,
+        lastUsedCardField.height
+    );
+
+    // フィールドの境界線を描画（任意）
+    lastUsedCardFieldGraphics.lineStyle(2, 0x000000, 1); // 黒い線
+    lastUsedCardFieldGraphics.strokeRect(
+        lastUsedCardField.x,
+        lastUsedCardField.y,
+        lastUsedCardField.width,
+        lastUsedCardField.height
+    );
+
+    // デッキのカードを作成
+    let deckField_center_x = deckField.x + deckField.width / 2; // デッキの中心座標（X軸）
+    let deckField_center_y = deckField.y + deckField.height / 2; // デッキの中心座標（Y軸）
+
+    cardResourse.forEach((card) => {
+        let deckCard = this.add.image(deckField_center_x, deckField_center_y, card.key).setScale(0.2);
+        deckCard.key = card.key;
+        deckData.push(deckCard);
+    });
+    //デッキの一番上に背面を表示
+    let deckBack = this.add.image(deckField_center_x, deckField_center_y, "card_back_blue").setScale(0.2).setInteractive();
+
+    // 背面のカードをクリックしたときカードを一枚引く
+    deckBack.on('pointerdown', () => {
+        if (gameOver) {
+            return;
+        }
+
+        // カードを引く
+        drawCard(this, 1);
+    });
+    
+    //ゲーム開始時カード4枚まで引く
+    for (let i = 0; i < 4; i++) {
+        drawCard(this, 1);
+    }
+}
+
+//カードを引く
+//scene：シーン
+//drawNum：引く枚数 
+//戻り値：なし
+function drawCard(scene ,drawNum){
+    //引く枚数より、手札フィルドの幅を計算
+    let myCardFiledWidth = myCards.length * 100;//手札フィールドの幅
+
+    //手札フィールドの開始座標（x座標）
+    let myCardFieldStartX = scene.cameras.main.width / 2 - myCardFiledWidth / 2;
+
+    for (let i = 0; i < drawNum; i++) {
+        // デッキのカードを引く
+        let card = deckData.pop();
+        if (!card) {
+            console.log("デッキが空です");
+            return;
+        }
+
+        // カードを最前面に移動
+        scene.children.bringToTop(card);
+
+        //カードを手札に移動する時のX座標を計算(現在手札の一番右のカードのX座標 + 100)
+        let targetX = myCardFieldStartX + 100 * (myCards.length + i);
+
+        // カードを引いたときのアニメーション
+        scene.tweens.add({
+            targets: card,
+            x: targetX, // 目標のX座標
+            y: myCardField.y, // 目標のY座標
+            ease: 'Power2', // イージング
+            duration: 500, // 移動にかける時間（ミリ秒）
+            onComplete: () => {// 移動完了後に実行される処理
+                // カード作成
+                createCard(scene, card);
+                //手札のカードの位置を再調整する
+                adjustMyCardPosition(scene);
+            },
+        });
+    }
+}
+
+//手札のカードの位置を再調整する
+function adjustMyCardPosition(scene){
+    //手札フィールドの幅を計算
+    let myCardFiledWidth = myCards.length * 100;
+    //手札フィールドの開始座標（x座標）
+    let myCardFieldStartX = scene.cameras.main.width / 2 - myCardFiledWidth / 2;
+
+    for (let i = 0; i < myCards.length; i++) {
+        let targetX = myCardFieldStartX + 100 * i;
+
+        // カードを引いたときのアニメーション
+        scene.tweens.add({
+            targets: myCards[i],
+            x: targetX, // 目標のX座標
+            y: myCardField.y, // 目標のY座標
+            ease: 'Power2', // イージング
+            duration: 500, // 移動にかける時間（ミリ秒）
+        });
+    }
+}
+
+//カード作成
+function createCard(scene, card) {
+    // カードをインタラクティブに設定
+    card.setInteractive();
+
+    // 元の位置を保持するカスタムプロパティ
+    card.originalY = card.y;
+
+    // マウスがカードに触れたときのイベント
+    card.on('pointerover', () => {
+        card.y = card.originalY - 20; // 少し上に移動
+    });
+
+    // マウスがカードから離れたときのイベント
+    card.on('pointerout', () => {
+        card.y = card.originalY; // 元の位置に戻す
+    });
+
+    // 左クリックでカードをフィールドに移動
+    card.on('pointerdown', () => {
+        // カードの画像を最前面に移動
+        scene.children.bringToTop(card);
+
+        // フィールド内のランダムな位置に移動
+        let targetX = Phaser.Math.Between(
+            usedCardField.x + 200, // 左余白
+            usedCardField.x + usedCardField.width - 200 // 右余白
+        );
+        let targetY = Phaser.Math.Between(
+            usedCardField.y + 120, // 上余白
+            usedCardField.y + usedCardField.height - 120 // 下余白
+        );
+
+        // 出したカードを配列に追加
+        usedCards.push(card);
+
+        // 手札から削除
+        myCards = myCards.filter((c) => c !== card);
+
+        // カードのイベントを無効化
+        card.disableInteractive();
+
+        // 手札位置を再調整
+        adjustMyCardPosition(scene);
+
+        // アニメーションを追加
+        scene.tweens.add({
+            targets: card,
+            x: targetX, // 目標のX座標
+            y: targetY, // 目標のY座標
+            ease: 'Power2', // イージング
+            duration: 500, // 移動にかける時間（ミリ秒）
+            onComplete: () => {// 移動完了後に実行される処理
+                // 最後に出したカードを最新カードフィルドに設定
+                scene.add.image(lastUsedCardField.x + lastUsedCardField.width / 2, lastUsedCardField.y + lastUsedCardField.height / 2, card.key).setScale(0.2);
+
+            },
+        });
+    });
+
+    // 手札に追加
+    myCards.push(card);
+    return card;
+}
+
+
+</script>
+
+</body>
+</html>
