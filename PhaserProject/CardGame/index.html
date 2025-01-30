@@ -121,6 +121,7 @@ var myCards = []; // 手札のカードを格納する配列
 var gameOver = false;
 var game = new Phaser.Game(config);
 
+
 function preload ()
 {
     //カードの正面
@@ -136,138 +137,63 @@ function preload ()
 
 function create ()
 {
-    // デッキのフィールドを作成
-    const deckGraphics = this.add.graphics();
+    //フィールドを作成
+    createField(this);
 
-    // フィールドのデザインを設定
-    deckGraphics.fillStyle(0x008000, 0.5); // 緑色（RGBAで50%の透明度）
-    deckGraphics.fillRect(
-        deckField.x,
-        deckField.y,
-        deckField.width,
-        deckField.height
-    );
+    //デッキを作成
+    createDeck(this);
 
-    // フィールドの境界線を描画（任意）
-    deckGraphics.lineStyle(2, 0x000000, 1); // 黒い線
-    deckGraphics.strokeRect(
-        deckField.x,
-        deckField.y,
-        deckField.width,
-        deckField.height
-    );
+    //ゲーム開始時カード5枚まで引く
+    drawCard(this, 5);
 
-    // フィールドを作成
-    const fieldGraphics = this.add.graphics();
-
-    // フィールドのデザインを設定
-    fieldGraphics.fillStyle(0x008000, 0.5); // 緑色（RGBAで50%の透明度）
-    fieldGraphics.fillRect(
-        usedCardField.x,
-        usedCardField.y,
-        usedCardField.width,
-        usedCardField.height
-    );
-
-    // フィールドの境界線を描画（任意）
-    fieldGraphics.lineStyle(2, 0x000000, 1); // 黒い線
-    fieldGraphics.strokeRect(
-        usedCardField.x,
-        usedCardField.y,
-        usedCardField.width,
-        usedCardField.height
-    );
-
-
-    // 最後に出したカードのフィールドを作成
-    const lastUsedCardFieldGraphics = this.add.graphics();
-
-    // フィールドのデザインを設定
-    lastUsedCardFieldGraphics.fillStyle(0x008000, 0.5); // 緑色（RGBAで50%の透明度）
-    lastUsedCardFieldGraphics.fillRect(
-        lastUsedCardField.x,
-        lastUsedCardField.y,
-        lastUsedCardField.width,
-        lastUsedCardField.height
-    );
-
-    // フィールドの境界線を描画（任意）
-    lastUsedCardFieldGraphics.lineStyle(2, 0x000000, 1); // 黒い線
-    lastUsedCardFieldGraphics.strokeRect(
-        lastUsedCardField.x,
-        lastUsedCardField.y,
-        lastUsedCardField.width,
-        lastUsedCardField.height
-    );
-
-    // デッキのカードを作成
-    let deckField_center_x = deckField.x + deckField.width / 2; // デッキの中心座標（X軸）
-    let deckField_center_y = deckField.y + deckField.height / 2; // デッキの中心座標（Y軸）
-
-    cardResourse.forEach((card) => {
-        let deckCard = this.add.image(deckField_center_x, deckField_center_y, card.key).setScale(0.2);
-        deckCard.key = card.key;
-        deckData.push(deckCard);
-    });
-    //デッキの一番上に背面を表示
-    let deckBack = this.add.image(deckField_center_x, deckField_center_y, "card_back_blue").setScale(0.2).setInteractive();
-
-    // 背面のカードをクリックしたときカードを一枚引く
-    deckBack.on('pointerdown', () => {
-        if (gameOver) {
-            return;
-        }
-
-        // カードを引く
-        drawCard(this, 1);
-    });
-    
-    //ゲーム開始時カード4枚まで引く
-    for (let i = 0; i < 4; i++) {
-        drawCard(this, 1);
-    }
 }
 
 //カードを引く
 //scene：シーン
 //drawNum：引く枚数 
 //戻り値：なし
-function drawCard(scene ,drawNum){
+function drawCard(scene ,drawNum , nowNum = 0){
+    if (nowNum >= drawNum) {//ドロー終了
+        return;
+    }
+
     //引く枚数より、手札フィルドの幅を計算
     let myCardFiledWidth = myCards.length * 100;//手札フィールドの幅
 
     //手札フィールドの開始座標（x座標）
     let myCardFieldStartX = scene.cameras.main.width / 2 - myCardFiledWidth / 2;
 
-    for (let i = 0; i < drawNum; i++) {
-        // デッキのカードを引く
-        let card = deckData.pop();
-        if (!card) {
-            console.log("デッキが空です");
-            return;
-        }
-
-        // カードを最前面に移動
-        scene.children.bringToTop(card);
-
-        //カードを手札に移動する時のX座標を計算(現在手札の一番右のカードのX座標 + 100)
-        let targetX = myCardFieldStartX + 100 * (myCards.length + i);
-
-        // カードを引いたときのアニメーション
-        scene.tweens.add({
-            targets: card,
-            x: targetX, // 目標のX座標
-            y: myCardField.y, // 目標のY座標
-            ease: 'Power2', // イージング
-            duration: 500, // 移動にかける時間（ミリ秒）
-            onComplete: () => {// 移動完了後に実行される処理
-                // カード作成
-                createCard(scene, card);
-                //手札のカードの位置を再調整する
-                adjustMyCardPosition(scene);
-            },
-        });
+    // デッキのカードを引く
+    let card = deckData.pop();
+    if (!card) {
+        console.log("デッキが空です");
+        return;
     }
+
+    // カードを最前面に移動
+    scene.children.bringToTop(card);
+
+    //カードを手札に移動する時のX座標を計算(現在手札の一番右のカードのX座標 + 100)
+    let targetX = myCardFieldStartX + 100 * (myCards.length);
+
+    // カードを引いたときのアニメーション
+    scene.tweens.add({
+        targets: card,
+        x: targetX, // 目標のX座標
+        y: myCardField.y, // 目標のY座標
+        ease: 'Power2', // イージング
+        duration: 250, // 移動にかける時間（ミリ秒）
+        onComplete: () => {// 移動完了後に実行される処理
+            // カード作成
+            createCard(scene, card);
+
+            //手札のカードの位置を再調整する
+            adjustMyCardPosition(scene);
+
+            //再帰処理
+            drawCard(scene, drawNum, nowNum + 1);
+        },
+    });
 }
 
 //手札のカードの位置を再調整する
@@ -345,7 +271,8 @@ function createCard(scene, card) {
             duration: 500, // 移動にかける時間（ミリ秒）
             onComplete: () => {// 移動完了後に実行される処理
                 // 最後に出したカードを最新カードフィルドに設定
-                scene.add.image(lastUsedCardField.x + lastUsedCardField.width / 2, lastUsedCardField.y + lastUsedCardField.height / 2, card.key).setScale(0.2);
+                lastUsedCard = card;
+                scene.add.image(lastUsedCardField.x + lastUsedCardField.width / 2, lastUsedCardField.y + lastUsedCardField.height / 2, lastUsedCard.key).setScale(0.2);
 
             },
         });
@@ -354,6 +281,98 @@ function createCard(scene, card) {
     // 手札に追加
     myCards.push(card);
     return card;
+}
+
+//デッキを作成
+function createDeck(scene){
+    // デッキのカードを作成
+    let deckField_center_x = deckField.x + deckField.width / 2; // デッキの中心座標（X軸）
+    let deckField_center_y = deckField.y + deckField.height / 2; // デッキの中心座標（Y軸）
+
+    cardResourse.forEach((card) => {
+        let deckCard = scene.add.image(deckField_center_x, deckField_center_y, card.key).setScale(0.2);
+        deckCard.key = card.key;
+        deckCard.pointValue = card.value;
+        deckData.push(deckCard);
+    });
+    //デッキの一番上に背面を表示
+    let deckBack = scene.add.image(deckField_center_x, deckField_center_y, "card_back_blue").setScale(0.2).setInteractive();
+
+    // 背面のカードをクリックしたときカードを一枚引く
+    deckBack.on('pointerdown', () => {
+        if (gameOver) {
+            return;
+        }
+
+        // カードを引く
+        drawCard(scene, 1);
+    });
+}
+
+//フィールドを作成
+function createField(scene){
+    // デッキのフィールドを作成
+    const deckGraphics = scene.add.graphics();
+
+    // フィールドのデザインを設定
+    deckGraphics.fillStyle(0x008000, 0.5); // 緑色（RGBAで50%の透明度）
+    deckGraphics.fillRect(
+        deckField.x,
+        deckField.y,
+        deckField.width,
+        deckField.height
+    );
+
+    // フィールドの境界線を描画（任意）
+    deckGraphics.lineStyle(2, 0x000000, 1); // 黒い線
+    deckGraphics.strokeRect(
+        deckField.x,
+        deckField.y,
+        deckField.width,
+        deckField.height
+    );
+
+    // フィールドを作成
+    const fieldGraphics = scene.add.graphics();
+
+    // フィールドのデザインを設定
+    fieldGraphics.fillStyle(0x008000, 0.5); // 緑色（RGBAで50%の透明度）
+    fieldGraphics.fillRect(
+        usedCardField.x,
+        usedCardField.y,
+        usedCardField.width,
+        usedCardField.height
+    );
+
+    // フィールドの境界線を描画（任意）
+    fieldGraphics.lineStyle(2, 0x000000, 1); // 黒い線
+    fieldGraphics.strokeRect(
+        usedCardField.x,
+        usedCardField.y,
+        usedCardField.width,
+        usedCardField.height
+    );
+
+    // 最後に出したカードのフィールドを作成
+    const lastUsedCardFieldGraphics = scene.add.graphics();
+
+    // フィールドのデザインを設定
+    lastUsedCardFieldGraphics.fillStyle(0x008000, 0.5); // 緑色（RGBAで50%の透明度）
+    lastUsedCardFieldGraphics.fillRect(
+        lastUsedCardField.x,
+        lastUsedCardField.y,
+        lastUsedCardField.width,
+        lastUsedCardField.height
+    );
+
+    // フィールドの境界線を描画（任意）
+    lastUsedCardFieldGraphics.lineStyle(2, 0x000000, 1); // 黒い線
+    lastUsedCardFieldGraphics.strokeRect(
+        lastUsedCardField.x,
+        lastUsedCardField.y,
+        lastUsedCardField.width,
+        lastUsedCardField.height
+    );
 }
 
 
