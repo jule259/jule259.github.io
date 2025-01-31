@@ -85,7 +85,7 @@ const cardResourse = [
 // デッキのフィルド
 const deckField = {
     x : 1100,
-    y : 100,
+    y : 200,
     width : 100,
     height : 145,
 }
@@ -93,14 +93,14 @@ const deckField = {
 // 出したカードのフィールド
 const usedCardField = {
     x : 200,
-    y : 100,
+    y : 200,
     width : 800,
     height : 300,
 }
 //  最新カードフィルド
 const lastUsedCardField = {
     x : 50,
-    y : 100,
+    y : 200,
     width : 100,
     height : 145,
 }
@@ -108,16 +108,35 @@ const lastUsedCardField = {
 //手札カードフィルド
 const myCardField = {
     x : 200,
-    y : 500,
+    y : 600,
     width : 200,
     height : 145,
 }
+
+//相手カードのフィールド
+const opponentCardField = {
+    x : 200,
+    y : 200,
+    width : 200,
+    height : 145,
+}
+
+class Player{
+    constructor(id) {
+        this.id = id;
+        this.deck = [];
+        this.myCards = [];
+    }
+
+}
+
 
 var lastUsedCard = null; // 最後に出したカード
 let deckData = []; // デッキのカードを格納する配列
 var deckCards = []; // カードの配列
 var usedCards = []; // 出したカードの配列
-var myCards = []; // 手札のカードを格納する配列
+var myCards = []; // 自分の手札を格納する配列
+var opponentCards = []; // 相手の手札を格納する配列
 var gameOver = false;
 var game = new Phaser.Game(config);
 
@@ -143,9 +162,11 @@ function create ()
     //デッキを作成
     createDeck(this);
 
-    //ゲーム開始時カード5枚まで引く
-    drawCard(this, 5);
-
+    //デッキをシャッフル
+    shuffleDeck(this, () => {
+        //シャッフル完了後、カードを5枚まで引く
+        drawCard(this, 5);
+    });
 }
 
 //カードを引く
@@ -175,6 +196,9 @@ function drawCard(scene ,drawNum , nowNum = 0){
 
     //カードを手札に移動する時のX座標を計算(現在手札の一番右のカードのX座標 + 100)
     let targetX = myCardFieldStartX + 100 * (myCards.length);
+
+    //カードの正面を表示
+    card.setTexture(card.key);
 
     // カードを引いたときのアニメーション
     scene.tweens.add({
@@ -237,6 +261,22 @@ function createCard(scene, card) {
 
     // 左クリックでカードをフィールドに移動
     card.on('pointerdown', () => {
+        //最後に出したカードと比較し、出せるか判定
+        if (lastUsedCard && lastUsedCard.pointValue >= card.pointValue) {
+            //出せない場合、カードを点滅させる
+            scene.tweens.add({
+            targets: card,
+            alpha: [0.5, // 透明度（開始）
+                1], // 透明度（終了）
+            ease: 'Power2',
+            duration: 500,
+            onComplete: () => {
+            },
+            });
+   
+            return;
+        }
+
         // カードの画像を最前面に移動
         scene.children.bringToTop(card);
 
@@ -290,7 +330,7 @@ function createDeck(scene){
     let deckField_center_y = deckField.y + deckField.height / 2; // デッキの中心座標（Y軸）
 
     cardResourse.forEach((card) => {
-        let deckCard = scene.add.image(deckField_center_x, deckField_center_y, card.key).setScale(0.2);
+        let deckCard = scene.add.image(deckField_center_x, deckField_center_y, "card_back_blue").setScale(0.2);
         deckCard.key = card.key;
         deckCard.pointValue = card.value;
         deckData.push(deckCard);
@@ -307,6 +347,39 @@ function createDeck(scene){
         // カードを引く
         drawCard(scene, 1);
     });
+}
+
+//デッキをシャッフル
+function shuffleDeck(scene, cb){
+    Phaser.Utils.Array.Shuffle(deckData);
+    //シャッフルのアニメーション(カードをランダムな位置に移動し、デッキの中心に集める)
+    for (let i = 0; i < deckData.length; i++) {
+        let targetX = Phaser.Math.Between(
+            deckField.x + 100, // 左余白
+            deckField.x + deckField.width - 100 // 右余白
+        );
+        let targetY = Phaser.Math.Between(
+            deckField.y + 50, // 上余白
+            deckField.y + deckField.height - 50 // 下余白
+        );
+
+        // アニメーションを追加
+        scene.tweens.add({
+            targets: deckData[i],
+            x: targetX, // 目標のX座標
+            y: targetY, // 目標のY座標
+            ease: 'Power2', // イージング
+            duration: 500, // 移動にかける時間（ミリ秒）
+            yoyo: true, // リピート
+            onComplete: () => {// 移動完了後に実行される処理
+            //全てのアニメーションが終了したらコールバック関数を実行
+                if (i === deckData.length - 1) {
+                    cb();
+                }
+            },
+        });
+
+    }
 }
 
 //フィールドを作成
