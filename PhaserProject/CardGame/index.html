@@ -2,7 +2,7 @@
 <html lang="en"> 
 <head> 
     <meta charset="UTF-8" />
-    <title> Phaser 3 Game </title>
+    <title> Card Game </title>
     <!-- <script src="js/phaser.min.js"></script> -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
     <style type="text/css">
@@ -26,60 +26,60 @@ var config = {
 };
 
 const cardResourse = [
-    {key : "10_of_clubs", path : "assets/10_of_clubs.png", value : 10},
-    {key : "10_of_diamonds", path : "assets/10_of_diamonds.png", value : 10},
-    {key : "10_of_hearts", path : "assets/10_of_hearts.png", value : 10},
-    {key : "10_of_spades", path : "assets/10_of_spades.png", value : 10},
-    {key : "2_of_clubs", path : "assets/2_of_clubs.png", value : 2},
-    {key : "2_of_diamonds", path : "assets/2_of_diamonds.png", value : 2},
-    {key : "2_of_hearts", path : "assets/2_of_hearts.png", value : 2},
-    {key : "2_of_spades", path : "assets/2_of_spades.png", value : 2},
-    {key : "3_of_clubs", path : "assets/3_of_clubs.png", value : 3},
-    {key : "3_of_diamonds", path : "assets/3_of_diamonds.png", value : 3},
-    {key : "3_of_hearts", path : "assets/3_of_hearts.png", value : 3},
-    {key : "3_of_spades", path : "assets/3_of_spades.png", value : 3},
-    {key : "4_of_clubs", path : "assets/4_of_clubs.png", value : 4},
-    {key : "4_of_diamonds", path : "assets/4_of_diamonds.png", value : 4},
-    {key : "4_of_hearts", path : "assets/4_of_hearts.png", value : 4},
-    {key : "4_of_spades", path : "assets/4_of_spades.png", value : 4},
-    {key : "5_of_clubs", path : "assets/5_of_clubs.png", value : 5},
-    {key : "5_of_diamonds", path : "assets/5_of_diamonds.png", value : 5},
-    {key : "5_of_hearts", path : "assets/5_of_hearts.png", value : 5},
-    {key : "5_of_spades", path : "assets/5_of_spades.png", value : 5},
-    {key : "6_of_clubs", path : "assets/6_of_clubs.png", value : 6},
-    {key : "6_of_diamonds", path : "assets/6_of_diamonds.png", value : 6},
-    {key : "6_of_hearts", path : "assets/6_of_hearts.png", value : 6},
-    {key : "6_of_spades", path : "assets/6_of_spades.png", value : 6},
-    {key : "7_of_clubs", path : "assets/7_of_clubs.png", value : 7},
-    {key : "7_of_diamonds", path : "assets/7_of_diamonds.png", value : 7},
-    {key : "7_of_hearts", path : "assets/7_of_hearts.png", value : 7},
-    {key : "7_of_spades", path : "assets/7_of_spades.png", value : 7},
-    {key : "8_of_clubs", path : "assets/8_of_clubs.png", value : 8},
-    {key : "8_of_diamonds", path : "assets/8_of_diamonds.png", value : 8},
-    {key : "8_of_hearts", path : "assets/8_of_hearts.png", value : 8},
-    {key : "8_of_spades", path : "assets/8_of_spades.png", value : 8},
-    {key : "9_of_clubs", path : "assets/9_of_clubs.png", value : 9},
-    {key : "9_of_diamonds", path : "assets/9_of_diamonds.png", value : 9},
-    {key : "9_of_hearts", path : "assets/9_of_hearts.png", value : 9},
-    {key : "9_of_spades", path : "assets/9_of_spades.png", value : 9},
-    {key : "ace_of_clubs", path : "assets/ace_of_clubs.png", value : 21},
-    {key : "ace_of_diamonds", path : "assets/ace_of_diamonds.png", value : 21},
-    {key : "ace_of_hearts", path : "assets/ace_of_hearts.png", value : 21},
-    {key : "ace_of_spades", path : "assets/ace_of_spades.png", value : 21},
-    {key : "black_joker", path : "assets/black_joker.png", value : 98},
-    {key : "jack_of_clubs", path : "assets/jack_of_clubs.png", value : 11},
-    {key : "jack_of_diamonds", path : "assets/jack_of_diamonds.png", value : 11},
-    {key : "jack_of_hearts", path : "assets/jack_of_hearts.png", value : 11},
-    {key : "jack_of_spades", path : "assets/jack_of_spades.png", value : 11},
-    {key : "king_of_clubs", path : "assets/king_of_clubs.png", value : 13},
-    {key : "king_of_diamonds", path : "assets/king_of_diamonds.png", value : 13},
-    {key : "king_of_hearts", path : "assets/king_of_hearts.png", value : 13},
-    {key : "king_of_spades", path : "assets/king_of_spades.png", value : 13},
-    {key : "queen_of_clubs", path : "assets/queen_of_clubs.png", value : 12},
-    {key : "queen_of_diamonds", path : "assets/queen_of_diamonds.png", value : 12},
-    {key : "queen_of_hearts", path : "assets/queen_of_hearts.png", value : 12},
-    {key : "queen_of_spades", path : "assets/queen_of_spades.png", value : 12},
-    {key : "red_joker", path : "assets/red_joker.png", value : 99}
+    {key : "10_of_clubs", path : "assets/10_of_clubs.png", value : 10, type: "clubs"},
+    {key : "10_of_diamonds", path : "assets/10_of_diamonds.png", value : 10, type: "diamonds"},
+    {key : "10_of_hearts", path : "assets/10_of_hearts.png", value : 10, type: "hearts"},
+    {key : "10_of_spades", path : "assets/10_of_spades.png", value : 10, type: "spades"},
+    {key : "2_of_clubs", path : "assets/2_of_clubs.png", value : 2, type: "clubs"},
+    {key : "2_of_diamonds", path : "assets/2_of_diamonds.png", value : 2, type: "diamonds"},
+    {key : "2_of_hearts", path : "assets/2_of_hearts.png", value : 2, type: "hearts"},
+    {key : "2_of_spades", path : "assets/2_of_spades.png", value : 2, type: "spades"},
+    {key : "3_of_clubs", path : "assets/3_of_clubs.png", value : 3, type: "clubs"},
+    {key : "3_of_diamonds", path : "assets/3_of_diamonds.png", value : 3, type: "diamonds"},
+    {key : "3_of_hearts", path : "assets/3_of_hearts.png", value : 3, type: "hearts"},
+    {key : "3_of_spades", path : "assets/3_of_spades.png", value : 3, type: "spades"},
+    {key : "4_of_clubs", path : "assets/4_of_clubs.png", value : 4, type: "clubs"},
+    {key : "4_of_diamonds", path : "assets/4_of_diamonds.png", value : 4, type: "diamonds"},
+    {key : "4_of_hearts", path : "assets/4_of_hearts.png", value : 4, type: "hearts"},
+    {key : "4_of_spades", path : "assets/4_of_spades.png", value : 4, type: "spades"},
+    {key : "5_of_clubs", path : "assets/5_of_clubs.png", value : 5, type: "clubs"},
+    {key : "5_of_diamonds", path : "assets/5_of_diamonds.png", value : 5, type: "diamonds"},
+    {key : "5_of_hearts", path : "assets/5_of_hearts.png", value : 5, type: "hearts"},
+    {key : "5_of_spades", path : "assets/5_of_spades.png", value : 5, type: "spades"},
+    {key : "6_of_clubs", path : "assets/6_of_clubs.png", value : 6, type: "clubs"},
+    {key : "6_of_diamonds", path : "assets/6_of_diamonds.png", value : 6, type: "diamonds"},
+    {key : "6_of_hearts", path : "assets/6_of_hearts.png", value : 6, type: "hearts"},
+    {key : "6_of_spades", path : "assets/6_of_spades.png", value : 6, type: "spades"},
+    {key : "7_of_clubs", path : "assets/7_of_clubs.png", value : 7, type: "clubs"},
+    {key : "7_of_diamonds", path : "assets/7_of_diamonds.png", value : 7, type: "diamonds"},
+    {key : "7_of_hearts", path : "assets/7_of_hearts.png", value : 7, type: "hearts"},
+    {key : "7_of_spades", path : "assets/7_of_spades.png", value : 7, type: "spades"},
+    {key : "8_of_clubs", path : "assets/8_of_clubs.png", value : 8, type: "clubs"},
+    {key : "8_of_diamonds", path : "assets/8_of_diamonds.png", value : 8, type: "diamonds"},
+    {key : "8_of_hearts", path : "assets/8_of_hearts.png", value : 8, type: "hearts"},
+    {key : "8_of_spades", path : "assets/8_of_spades.png", value : 8, type: "spades"},
+    {key : "9_of_clubs", path : "assets/9_of_clubs.png", value : 9, type: "clubs"},
+    {key : "9_of_diamonds", path : "assets/9_of_diamonds.png", value : 9, type: "diamonds"},
+    {key : "9_of_hearts", path : "assets/9_of_hearts.png", value : 9, type: "hearts"},
+    {key : "9_of_spades", path : "assets/9_of_spades.png", value : 9, type: "spades"},
+    {key : "ace_of_clubs", path : "assets/ace_of_clubs.png", value : 21, type: "clubs"},
+    {key : "ace_of_diamonds", path : "assets/ace_of_diamonds.png", value : 21, type: "diamonds"},
+    {key : "ace_of_hearts", path : "assets/ace_of_hearts.png", value : 21, type: "hearts"},
+    {key : "ace_of_spades", path : "assets/ace_of_spades.png", value : 21, type: "spades"},
+    {key : "black_joker", path : "assets/black_joker.png", value : 98, type: "joker"},
+    {key : "jack_of_clubs", path : "assets/jack_of_clubs.png", value : 11, type: "clubs"},
+    {key : "jack_of_diamonds", path : "assets/jack_of_diamonds.png", value : 11, type: "diamonds"},
+    {key : "jack_of_hearts", path : "assets/jack_of_hearts.png", value : 11, type: "hearts"},
+    {key : "jack_of_spades", path : "assets/jack_of_spades.png", value : 11, type: "spades"},
+    {key : "king_of_clubs", path : "assets/king_of_clubs.png", value : 13, type: "clubs"},
+    {key : "king_of_diamonds", path : "assets/king_of_diamonds.png", value : 13, type: "diamonds"},
+    {key : "king_of_hearts", path : "assets/king_of_hearts.png", value : 13, type: "hearts"},
+    {key : "king_of_spades", path : "assets/king_of_spades.png", value : 13, type: "spades"},
+    {key : "queen_of_clubs", path : "assets/queen_of_clubs.png", value : 12, type: "clubs"},
+    {key : "queen_of_diamonds", path : "assets/queen_of_diamonds.png", value : 12, type: "diamonds"},
+    {key : "queen_of_hearts", path : "assets/queen_of_hearts.png", value : 12, type: "hearts"},
+    {key : "queen_of_spades", path : "assets/queen_of_spades.png", value : 12, type: "spades"},
+    {key : "red_joker", path : "assets/red_joker.png", value : 99, type: "joker"}
 ];
 
 // デッキのフィルド
@@ -106,7 +106,7 @@ const lastUsedCardField = {
 }
 
 //手札カードフィルド
-const myCardField = {
+var myCardField = {
     x : 200,
     y : 600,
     width : 200,
@@ -126,17 +126,17 @@ class Player{
         this.id = id;
         this.deck = [];
         this.myCards = [];
+        this.isMyturn = false;
     }
 
 }
 
-
 var lastUsedCard = null; // 最後に出したカード
-let deckData = []; // デッキのカードを格納する配列
-var deckCards = []; // カードの配列
+var okBtn = null; // OKボタン
+var deckData = []; // デッキのカードを格納する配列
 var usedCards = []; // 出したカードの配列
-var myCards = []; // 自分の手札を格納する配列
-var opponentCards = []; // 相手の手札を格納する配列
+var myCards = []; // 手札を格納する配列
+var selectedCards = []; // 選択したカードの配列
 var gameOver = false;
 var game = new Phaser.Game(config);
 
@@ -152,20 +152,64 @@ function preload ()
     this.load.image("card_back_blue", "assets/card_back_blue.png");
     this.load.image("card_back_green", "assets/card_back_green.png");
 
+    //ボタン
+    this.load.image("button_ok", "assets/button_ok.png");
+
 }
 
 function create ()
 {
+    //メニュー画面
+    // const titleText = this.add.text(this.sys.game.scale.width / 2, this.sys.game.scale.height / 2,
+    //     "Card Game\nClick to Play",
+    //     { align: "center", strokeThickness: 4, fontSize: 40, fontStyle: "bold", color: "#8c7ae6" }
+    // )
+    //     .setOrigin(.5)
+    //     .setDepth(3)
+    //     .setInteractive();
+    // this.add.tween({
+    //     targets: titleText,
+    //     duration: 800,
+    //     ease: (value) => (value > .8),
+    //     alpha: 0,
+    //     repeat: -1,
+    //     yoyo: true,
+    // });
+    // //タイトルのイベント
+    // titleText.on(Phaser.Input.Events.POINTER_OVER, () => {
+    //     titleText.setColor("#9c88ff");
+    //     this.input.setDefaultCursor("pointer");
+    // });
+    // titleText.on(Phaser.Input.Events.POINTER_OUT, () => {
+    //     titleText.setColor("#8c7ae6");
+    //     this.input.setDefaultCursor("default");
+    // });
+    // titleText.on(Phaser.Input.Events.POINTER_DOWN, () => {
+    //     this.add.tween({
+    //         targets: titleText,
+    //         ease: Phaser.Math.Easing.Bounce.InOut,
+    //         y: -1000,
+    //         onComplete: () => {
+    //             startGame(this);
+    //         }
+    //     })
+    // });
+
+    startGame(this);
+
+}
+
+function startGame(scene){
     //フィールドを作成
-    createField(this);
+    createField(scene);
 
     //デッキを作成
-    createDeck(this);
+    createDeck(scene);
 
     //デッキをシャッフル
-    shuffleDeck(this, () => {
+    shuffleDeck(scene, () => {
         //シャッフル完了後、カードを5枚まで引く
-        drawCard(this, 5);
+        drawCard(scene, 5);
     });
 }
 
@@ -175,6 +219,10 @@ function create ()
 //戻り値：なし
 function drawCard(scene ,drawNum , nowNum = 0){
     if (nowNum >= drawNum) {//ドロー終了
+        //手札をソート
+        sortCard(myCards, "pointValue", "asc");
+        //手札の位置を再調整する
+        adjustMyCardPosition(scene);
         return;
     }
 
@@ -221,11 +269,20 @@ function drawCard(scene ,drawNum , nowNum = 0){
 }
 
 //手札のカードの位置を再調整する
-function adjustMyCardPosition(scene){
+function adjustMyCardPosition(scene, cb = null){
+    if  (myCards.length === 0) {
+        //ボタンを作成（削除）
+        createButton(scene);
+        return;
+    }
+
     //手札フィールドの幅を計算
     let myCardFiledWidth = myCards.length * 100;
     //手札フィールドの開始座標（x座標）
     let myCardFieldStartX = scene.cameras.main.width / 2 - myCardFiledWidth / 2;
+    //手札フィルド属性を更新
+    myCardField.x = myCardFieldStartX;
+    myCardField.width = myCardFiledWidth;
 
     for (let i = 0; i < myCards.length; i++) {
         let targetX = myCardFieldStartX + 100 * i;
@@ -237,17 +294,30 @@ function adjustMyCardPosition(scene){
             y: myCardField.y, // 目標のY座標
             ease: 'Power2', // イージング
             duration: 500, // 移動にかける時間（ミリ秒）
+            onComplete: () => {// 移動完了後に実行される処理
+                //全てのアニメーションが終了したら
+                if ((i === myCards.length - 1)) {
+                    //ボタンを作成
+                    createButton(scene);
+                    //コールバック関数を実行
+                    if (cb) {
+                        cb();
+                    }
+                }
+            },
         });
     }
 }
 
 //カード作成
 function createCard(scene, card) {
+    //カスタムプロパティ
+    card.originalY = card.y;// 元のY座標
+    card.isSelect = false;// 選択状態
+    card.showNo = myCards.length + 1;// 手札の番号
+
     // カードをインタラクティブに設定
     card.setInteractive();
-
-    // 元の位置を保持するカスタムプロパティ
-    card.originalY = card.y;
 
     // マウスがカードに触れたときのイベント
     card.on('pointerover', () => {
@@ -256,39 +326,78 @@ function createCard(scene, card) {
 
     // マウスがカードから離れたときのイベント
     card.on('pointerout', () => {
-        card.y = card.originalY; // 元の位置に戻す
+        if (!card.isSelect) {// 選択されていない場合
+            card.y = card.originalY; // 元の位置に戻す
+        }
     });
 
-    // 左クリックでカードをフィールドに移動
+    // カードをクリックしたときのイベント
     card.on('pointerdown', () => {
-        //最後に出したカードと比較し、出せるか判定
-        if (lastUsedCard && lastUsedCard.pointValue >= card.pointValue) {
-            //出せない場合、カードを点滅させる
-            scene.tweens.add({
-            targets: card,
-            alpha: [0.5, // 透明度（開始）
-                1], // 透明度（終了）
-            ease: 'Power2',
-            duration: 500,
-            onComplete: () => {
-            },
-            });
-   
-            return;
+        card.isSelect = !card.isSelect; // 選択状態を反転
+        //選択されたカードを配列に追加
+        if (card.isSelect) {
+            selectedCards.push(card);
+        } else {//選択解除
+            selectedCards = selectedCards.filter((c) => c !== card);
         }
+        //最後に出したカードと比較し、出せるか判定
+        // if (lastUsedCard && lastUsedCard.pointValue >= card.pointValue) {
+        //     //出せない場合、カードを点滅させる
+        //     scene.tweens.add({
+        //     targets: card,
+        //     alpha: [0.5, // 透明度（開始）
+        //         1], // 透明度（終了）
+        //     ease: 'Power2',
+        //     duration: 500,
+        //     });
+   
+        //     return;
+        // }
+    });
 
+    // 手札に追加
+    myCards.push(card);
+    return card;
+}
+
+//カードをソートする
+function sortCard(cards, sortkey, sortType = "asc") {
+    //ソート
+    cards.sort((a, b) => {
+        if (sortType === "asc") {
+            return a[sortkey] - b[sortkey];
+        } else {
+            return b[sortkey] - a[sortkey];
+        }
+    });
+    //番号を再設定
+    if (sortkey != "showNo") {//ソートキーがshowNo以外の場合、showNoを再設定
+        for (let i = 0; i < cards.length; i++) {
+            cards[i].showNo = i + 1;
+        }
+    }
+}
+
+//カードを出す
+function playCard(scene){
+    // フィールド内のランダムな位置に移動
+    let targetX = Phaser.Math.Between(
+        usedCardField.x + 100, // 左余白
+        usedCardField.x + usedCardField.width - selectedCards.length * 100 // 右余白
+    );
+    let targetY = Phaser.Math.Between(
+        usedCardField.y + 120, // 上余白
+        usedCardField.y + usedCardField.height - 120 // 下余白
+    );
+
+    //選択されたカードをソート
+    sortCard(selectedCards, "showNo", "asc");
+
+    //選択されたカードを出す
+    for (let i = 0; i < selectedCards.length; i++) {
+        let card = selectedCards[i];
         // カードの画像を最前面に移動
         scene.children.bringToTop(card);
-
-        // フィールド内のランダムな位置に移動
-        let targetX = Phaser.Math.Between(
-            usedCardField.x + 200, // 左余白
-            usedCardField.x + usedCardField.width - 200 // 右余白
-        );
-        let targetY = Phaser.Math.Between(
-            usedCardField.y + 120, // 上余白
-            usedCardField.y + usedCardField.height - 120 // 下余白
-        );
 
         // 出したカードを配列に追加
         usedCards.push(card);
@@ -299,13 +408,10 @@ function createCard(scene, card) {
         // カードのイベントを無効化
         card.disableInteractive();
 
-        // 手札位置を再調整
-        adjustMyCardPosition(scene);
-
         // アニメーションを追加
         scene.tweens.add({
             targets: card,
-            x: targetX, // 目標のX座標
+            x: targetX + i * 100, // 目標のX座標
             y: targetY, // 目標のY座標
             ease: 'Power2', // イージング
             duration: 500, // 移動にかける時間（ミリ秒）
@@ -313,14 +419,17 @@ function createCard(scene, card) {
                 // 最後に出したカードを最新カードフィルドに設定
                 lastUsedCard = card;
                 scene.add.image(lastUsedCardField.x + lastUsedCardField.width / 2, lastUsedCardField.y + lastUsedCardField.height / 2, lastUsedCard.key).setScale(0.2);
-
+                if (i === selectedCards.length - 1) {
+                    // 手札位置を再調整
+                    adjustMyCardPosition(scene);
+                    //選択されたカードをリセット
+                    selectedCards = [];
+                }
             },
         });
-    });
+    }
 
-    // 手札に追加
-    myCards.push(card);
-    return card;
+
 }
 
 //デッキを作成
@@ -350,7 +459,7 @@ function createDeck(scene){
 }
 
 //デッキをシャッフル
-function shuffleDeck(scene, cb){
+function shuffleDeck(scene, cb = null){
     Phaser.Utils.Array.Shuffle(deckData);
     //シャッフルのアニメーション(カードをランダムな位置に移動し、デッキの中心に集める)
     for (let i = 0; i < deckData.length; i++) {
@@ -373,7 +482,7 @@ function shuffleDeck(scene, cb){
             yoyo: true, // リピート
             onComplete: () => {// 移動完了後に実行される処理
             //全てのアニメーションが終了したらコールバック関数を実行
-                if (i === deckData.length - 1) {
+                if ((i === deckData.length - 1) && cb) {
                     cb();
                 }
             },
@@ -446,6 +555,42 @@ function createField(scene){
         lastUsedCardField.width,
         lastUsedCardField.height
     );
+}
+
+//ボタン作成
+function createButton(scene){
+    //手札が0枚の場合、ボタンを消す
+    if (myCards.length === 0) {
+        if (okBtn) {
+            okBtn.destroy();
+            okBtn = null;
+        }
+        return;
+    }
+    //ボタンの位置を計算
+    let button_x = myCardField.x + myCardField.width;
+    let button_y = myCardField.y - 80;
+    //すでにボタンが存在する場合、位置を更新
+    if (okBtn) {
+        okBtn.x = button_x;
+        okBtn.y = button_y;
+        return;
+    }
+
+    //手札の右上にOKボタンを作成
+    okBtn = scene.add.image(button_x, button_y, "button_ok").setScale(0.4).setInteractive();
+    //ボタンのイベント
+    okBtn.on(Phaser.Input.Events.POINTER_OVER, () => {
+        scene.input.setDefaultCursor("pointer");
+    });
+    okBtn.on(Phaser.Input.Events.POINTER_OUT, () => {
+        scene.input.setDefaultCursor("default");
+    });
+    okBtn.on(Phaser.Input.Events.POINTER_DOWN, () => {
+        //カードを出す
+        playCard(scene);
+    });
+
 }
 
 
