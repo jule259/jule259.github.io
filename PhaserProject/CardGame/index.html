@@ -121,6 +121,12 @@ const opponentCardField = {
     height : 145,
 }
 
+//カード情報
+const cardInfo = {
+    width : 100,
+    height : 145,
+}
+
 class Player{
     constructor(id) {
         this.id = id;
@@ -132,11 +138,13 @@ class Player{
 }
 
 var lastUsedCard = null; // 最後に出したカード
+var lastUsedCards =[]; // 最後に出したカードを格納する配列
 var okBtn = null; // OKボタン
 var deckData = []; // デッキのカードを格納する配列
 var usedCards = []; // 出したカードの配列
 var myCards = []; // 手札を格納する配列
 var selectedCards = []; // 選択したカードの配列
+var usedCardsLayer = null; // 最後に出したカードを表示するレイヤー
 var gameOver = false;
 var game = new Phaser.Game(config);
 
@@ -227,7 +235,7 @@ function drawCard(scene ,drawNum , nowNum = 0){
     }
 
     //引く枚数より、手札フィルドの幅を計算
-    let myCardFiledWidth = myCards.length * 100;//手札フィールドの幅
+    let myCardFiledWidth = myCards.length * cardInfo.width ;//手札フィールドの幅
 
     //手札フィールドの開始座標（x座標）
     let myCardFieldStartX = scene.cameras.main.width / 2 - myCardFiledWidth / 2;
@@ -243,7 +251,7 @@ function drawCard(scene ,drawNum , nowNum = 0){
     scene.children.bringToTop(card);
 
     //カードを手札に移動する時のX座標を計算(現在手札の一番右のカードのX座標 + 100)
-    let targetX = myCardFieldStartX + 100 * (myCards.length);
+    let targetX = myCardFieldStartX + cardInfo.width * (myCards.length);
 
     //カードの正面を表示
     card.setTexture(card.key);
@@ -277,7 +285,7 @@ function adjustMyCardPosition(scene, cb = null){
     }
 
     //手札フィールドの幅を計算
-    let myCardFiledWidth = myCards.length * 100;
+    let myCardFiledWidth = myCards.length * cardInfo.width;
     //手札フィールドの開始座標（x座標）
     let myCardFieldStartX = scene.cameras.main.width / 2 - myCardFiledWidth / 2;
     //手札フィルド属性を更新
@@ -285,7 +293,7 @@ function adjustMyCardPosition(scene, cb = null){
     myCardField.width = myCardFiledWidth;
 
     for (let i = 0; i < myCards.length; i++) {
-        let targetX = myCardFieldStartX + 100 * i;
+        let targetX = myCardFieldStartX + cardInfo.width * i;
 
         // カードを引いたときのアニメーション
         scene.tweens.add({
@@ -340,19 +348,6 @@ function createCard(scene, card) {
         } else {//選択解除
             selectedCards = selectedCards.filter((c) => c !== card);
         }
-        //最後に出したカードと比較し、出せるか判定
-        // if (lastUsedCard && lastUsedCard.pointValue >= card.pointValue) {
-        //     //出せない場合、カードを点滅させる
-        //     scene.tweens.add({
-        //     targets: card,
-        //     alpha: [0.5, // 透明度（開始）
-        //         1], // 透明度（終了）
-        //     ease: 'Power2',
-        //     duration: 500,
-        //     });
-   
-        //     return;
-        // }
     });
 
     // 手札に追加
@@ -382,8 +377,8 @@ function sortCard(cards, sortkey, sortType = "asc") {
 function playCard(scene){
     // フィールド内のランダムな位置に移動
     let targetX = Phaser.Math.Between(
-        usedCardField.x + 100, // 左余白
-        usedCardField.x + usedCardField.width - selectedCards.length * 100 // 右余白
+        usedCardField.x + cardInfo.width, // 左余白
+        usedCardField.x + usedCardField.width - selectedCards.length * cardInfo.width // 右余白
     );
     let targetY = Phaser.Math.Between(
         usedCardField.y + 120, // 上余白
@@ -393,6 +388,12 @@ function playCard(scene){
     //選択されたカードをソート
     sortCard(selectedCards, "showNo", "asc");
 
+    //表示番号の振り直し
+    for (let i = 0; i < selectedCards.length; i++) {
+        selectedCards[i].showNo = i + 1;
+    }
+
+    lastUsedCards = [];
     //選択されたカードを出す
     for (let i = 0; i < selectedCards.length; i++) {
         let card = selectedCards[i];
@@ -411,19 +412,60 @@ function playCard(scene){
         // アニメーションを追加
         scene.tweens.add({
             targets: card,
-            x: targetX + i * 100, // 目標のX座標
+            x: targetX + i * cardInfo.width, // 目標のX座標
             y: targetY, // 目標のY座標
             ease: 'Power2', // イージング
             duration: 500, // 移動にかける時間（ミリ秒）
             onComplete: () => {// 移動完了後に実行される処理
                 // 最後に出したカードを最新カードフィルドに設定
-                lastUsedCard = card;
-                scene.add.image(lastUsedCardField.x + lastUsedCardField.width / 2, lastUsedCardField.y + lastUsedCardField.height / 2, lastUsedCard.key).setScale(0.2);
+                lastUsedCard = scene.add.image(lastUsedCardField.x + lastUsedCardField.width / 2, lastUsedCardField.y + lastUsedCardField.height / 2, card.key).setScale(0.2);
+                lastUsedCard.showNo = card.showNo;
+                // 最後に出したカードの配列に追加(複製して格納)
+                lastUsedCards.push(lastUsedCard);
                 if (i === selectedCards.length - 1) {
+                    // 表示操作用カードを追加
+                    lastUsedCard = scene.add.image(lastUsedCardField.x + lastUsedCardField.width / 2, lastUsedCardField.y + lastUsedCardField.height / 2, card.key).setScale(0.2);
+                    // 最後に出したカードのイベントを設定
+                    lastUsedCard.setInteractive();
+                    lastUsedCard.on('pointerover', () => {// マウスがカードに触れたときのイベント
+                        // 最後の一回で出した全てのカードをポップアップで表示
+                        lastUsedCards.forEach((lcard) => {
+                            lcard.originalX = lcard.x;
+                            lcard.originalY = lcard.y;
+                            let cardWidth = lastUsedCards.length * cardInfo.width;
+                            // カードの横位置を調整（アニメーション）
+                            scene.tweens.add({
+                                targets: lcard,
+                                x: (scene.cameras.main.width / 2 - cardWidth / 2) + cardInfo.width / 2 + cardInfo.width * (lcard.showNo - 1),
+                                y: lastUsedCardField.y + lastUsedCardField.height / 2,
+                                ease: 'Power2',
+                                duration: 100,
+                            });
+                            // lcard.x = (scene.cameras.main.width / 2 - cardWidth / 2) + cardInfo.width / 2 + cardInfo.width * (lcard.showNo - 1);
+                            // lcard.y = lastUsedCardField.y + lastUsedCardField.height / 2;
+                        });
+                    });
+                    lastUsedCard.on('pointerout', () => {// マウスがカードから離れたときのイベント
+                        // 最後の一回で出した全てのカードを削除
+                        lastUsedCards.forEach((lcard) => {
+                            // カードを元の位置に戻す(アニメーション）
+                            scene.tweens.add({
+                                targets: lcard,
+                                x: lcard.originalX,
+                                y: lcard.originalY,
+                                ease: 'Power2',
+                                duration: 100,
+                            });
+                            // lcard.x = lcard.originalX;
+                            // lcard.y = lcard.originalY;
+                        });
+                    });
+
                     // 手札位置を再調整
                     adjustMyCardPosition(scene);
-                    //選択されたカードをリセット
+                    // 選択されたカードをリセット
                     selectedCards = [];
+                    
                 }
             },
         });
@@ -464,8 +506,8 @@ function shuffleDeck(scene, cb = null){
     //シャッフルのアニメーション(カードをランダムな位置に移動し、デッキの中心に集める)
     for (let i = 0; i < deckData.length; i++) {
         let targetX = Phaser.Math.Between(
-            deckField.x + 100, // 左余白
-            deckField.x + deckField.width - 100 // 右余白
+            deckField.x + cardInfo.width, // 左余白
+            deckField.x + deckField.width - cardInfo.width // 右余白
         );
         let targetY = Phaser.Math.Between(
             deckField.y + 50, // 上余白
