@@ -36,7 +36,7 @@ export function startGame(scene){
 
     //デッキをシャッフル
     shuffleDeck(scene, () => {
-        //シャッフル完了後、カードを5枚まで引く
+        //シャッフル完了後、カードを13枚まで引く
         drawCard(scene, 13);
     });
 }

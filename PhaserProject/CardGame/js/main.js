@@ -10,6 +10,10 @@ const config = {
     scene: {
         preload: preload,
         create: create
+    },
+    scale: {
+        mode: Phaser.Scale.FIT, // Automatically resize to fit the browser window
+        autoCenter: Phaser.Scale.CENTER_BOTH // Center the game horizontally and vertically
     }
 };
 
