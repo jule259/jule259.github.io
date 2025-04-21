@@ -2,7 +2,8 @@ const http = require("node:http");
 const fs = require("fs");
 const path = require("path");
 
-const hostname = "127.0.0.1";
+const hostname = "localhost";
+// const hostname = "192.168.2.105"; // 自分のIPアドレスに変更
 const port = 8088;
 
 const server = http.createServer((req, res) => {

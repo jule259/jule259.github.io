@@ -7,8 +7,11 @@ let deckData = []; // デッキのカードを格納する配列
 // let usedCards = []; // 出したカードの配列
 let myCards = []; // 手札を格納する配列
 let selectedCards = []; // 選択したカードの配列
-let usedCardsLayer = null; // 最後に出したカードを表示するレイヤー
 let gameOver = false;
+let playerMe = null;
+let playerLeft = null;
+let playerRight = null;
+
 //手札カードフィルド
 let myCardField = {
     x : 200,
@@ -20,11 +23,15 @@ let myCardField = {
 class Player{
     constructor(id) {
         this.id = id;
-        this.deck = [];
+        this.type = "local"; // local, robot, remote
+        this.position_x = 0; // プレイヤーのX座標
+        this.position_y = 0; // プレイヤーのY座標
         this.myCards = [];
         this.isMyturn = false;
+        this.status = "waiting"; // waiting, playing, gameover
+        this.textObj = null; // プレイヤーのテキストオブジェクト
+        this.idObj = null; // プレイヤーのIDオブジェクト
     }
-
 }
 
 export function startGame(scene){
@@ -34,70 +41,118 @@ export function startGame(scene){
     //デッキを作成
     createDeck(scene);
 
+    //Player初期化
+    playerMe = new Player("me");
+    playerMe.type = "local";
+    playerMe.status = "playing";
+    playerLeft = new Player("left");
+    playerLeft.type = "robot";
+    playerLeft.status = "waiting";
+    playerLeft.position_x = CONSTS.leftPlayerField.x + CONSTS.leftPlayerField.width / 2;
+    playerLeft.position_y = CONSTS.leftPlayerField.y + CONSTS.leftPlayerField.height / 2;
+    playerRight = new Player("right");
+    playerRight.type = "robot";
+    playerRight.status = "waiting";
+    playerRight.position_x = CONSTS.rightPlayerField.x + CONSTS.rightPlayerField.width / 2;
+    playerRight.position_y = CONSTS.rightPlayerField.y + CONSTS.rightPlayerField.height / 2;
+
+
+    // console.log(playerMe);
+    // console.log(playerLeft);
+
+    //playerRight = new Player("right");
+
     //デッキをシャッフル
-    shuffleDeck(scene, () => {
-        //シャッフル完了後、カードを13枚まで引く
-        drawCard(scene, 13);
+    shuffleDeck(scene, 0, () => {
+        //シャッフル完了後、各ユーザーがカードを13枚まで引く
+        drawCard(scene, 13, playerMe);
+        drawCard(scene, 13, playerLeft);
+        drawCard(scene, 13, playerRight);
     });
 }
 
 //カードを引く
 //scene：シーン
-//drawNum：引く枚数 
+//drawNum：引く枚数
 //戻り値：なし
-export function drawCard(scene ,drawNum , nowNum = 0){
-    if (nowNum >= drawNum) {//ドロー終了
-        //手札をソート
-        sortCard(myCards, "pointValue", "asc");
-        //手札の位置を再調整する
-        adjustMyCardPosition(scene);
-        return;
-    }
+function drawCard(scene ,drawNum , player, nowNum = 0){
+    if (player.type != "local"){//自分以外のプレーヤー
+        if (nowNum >= drawNum) {//ドロー終了
+            //手札をソート
+            sortCard(player.myCards, "pointValue", "asc");
+            return;
+        }
 
-    //引く枚数より、手札フィルドの幅を計算
-    let myCardFiledWidth = myCards.length * CONSTS.cardInfo.width ;//手札フィールドの幅
+        //デッキのカードを引く
+        let card = deckData.pop();
+        if (!card) {
+            console.log("デッキが空です");
+            return;
+        }
+        player.myCards.push(card);//手札に追加
 
-    //手札フィールドの開始座標（x座標）
-    let myCardFieldStartX = scene.cameras.main.width / 2 - myCardFiledWidth / 2;
-
-    //デッキのカードを引く
-    let card = deckData.pop();
-    if (!card) {
-        console.log("デッキが空です");
-        return;
-    }
-
-    //カードを最前面に移動
-    scene.children.bringToTop(card);
-
-    //カードを手札に移動する時のX座標を計算(現在手札の一番右のカードのX座標 + 100)
-    let targetX = myCardFieldStartX + CONSTS.cardInfo.width * (myCards.length);
-
-    //カードの正面を表示
-    card.setTexture(card.key);
-
-    // カードを引いたときのアニメーション
-    scene.tweens.add({
-        targets: card,
-        x: targetX, // 目標のX座標
-        y: myCardField.y, // 目標のY座標
-        ease: 'Power2', // イージング
-        duration: 100, // 移動にかける時間（ミリ秒）
-        onComplete: () => {// 移動完了後に実行される処理
-            // カード作成
-            createCard(scene, card);
-
-            //手札のカードの位置を再調整する
+        // カードを引いたときのアニメーション
+        scene.tweens.add({
+            targets: card,
+            x: player.position_x, // 目標のX座標
+            y: player.position_y, // 目標のY座標
+            ease: 'Power2', // イージング
+            duration: 100, // 移動にかける時間（ミリ秒）
+            onComplete: () => {// 移動完了後に実行される処理
+                //プレーヤー情報を表示
+                showOtherPlayerInfo(scene, player);
+                //再帰処理
+                drawCard(scene, drawNum, player, nowNum + 1);
+            },
+        });
+    } else {//自分のプレーヤー
+        if (nowNum >= drawNum) {//ドロー終了
+            //手札をソート
+            sortCard(myCards, "pointValue", "asc");
+            //手札の位置を再調整する
             adjustMyCardPosition(scene);
+            playerMe.myCards = myCards;//手札を自分のプレーヤーに設定
+            console.log(player.type + "出せるカードの種類" + getPlayableCards(myCards));
+            return;
+        }
 
-            //再帰処理
-            drawCard(scene, drawNum, nowNum + 1);
-        },
-    });
+        //引く枚数より、手札フィルドの幅を計算
+        let myCardFiledWidth = myCards.length * CONSTS.cardInfo.width ;//手札フィールドの幅
+        //手札フィールドの開始座標（x座標）
+        let myCardFieldStartX = scene.cameras.main.width / 2 - myCardFiledWidth / 2;
+        //デッキのカードを引く
+        let card = deckData.pop();
+        if (!card) {
+            console.log("デッキが空です");
+            return;
+        }
+        //カードを最前面に移動
+        scene.children.bringToTop(card);
+        //カードを手札に移動する時のX座標を計算(現在手札の一番右のカードのX座標 + 100)
+        let targetX = myCardFieldStartX + CONSTS.cardInfo.width * (myCards.length);
+        //カードの正面を表示
+        card.setTexture(card.key);
+        // カードを引いたときのアニメーション
+        scene.tweens.add({
+            targets: card,
+            x: targetX, // 目標のX座標
+            y: myCardField.y, // 目標のY座標
+            ease: 'Power2', // イージング
+            duration: 100, // 移動にかける時間（ミリ秒）
+            onComplete: () => {// 移動完了後に実行される処理
+                // カード作成
+                createCard(scene, card);
+                //手札のカードの位置を再調整する
+                adjustMyCardPosition(scene);
+                //再帰処理
+                drawCard(scene, drawNum, player, nowNum + 1);
+            },
+        });
+    }
 }
 
 //手札のカードの位置を再調整する
-export function adjustMyCardPosition(scene, cb = null){
+function adjustMyCardPosition(scene, cb = null){
     if  (myCards.length === 0) {
         //ボタンを作成（削除）
         createButton(scene);
@@ -115,7 +170,7 @@ export function adjustMyCardPosition(scene, cb = null){
     for (let i = 0; i < myCards.length; i++) {
         let targetX = myCardFieldStartX + CONSTS.cardInfo.width * i;
 
-        // カードを引いたときのアニメーション
+        // アニメーション
         scene.tweens.add({
             targets: myCards[i],
             x: targetX, // 目標のX座標
@@ -138,7 +193,7 @@ export function adjustMyCardPosition(scene, cb = null){
 }
 
 //カード作成
-export function createCard(scene, card) {
+function createCard(scene, card) {
     //カスタムプロパティ
     card.originalY = card.y;// 元のY座標
     card.isSelect = false;// 選択状態
@@ -176,7 +231,7 @@ export function createCard(scene, card) {
 }
 
 //カードをソートする
-export function sortCard(cards, sortkey, sortType = "asc") {
+function sortCard(cards, sortkey, sortType = "asc") {
     //ソート
     cards.sort((a, b) => {
         if (sortType === "asc") {
@@ -193,7 +248,7 @@ export function sortCard(cards, sortkey, sortType = "asc") {
 }
 
 //カードを出す
-export function playCard(scene){
+function playCard(scene){
     if (selectedCards.length === 0) {
         return;
     }
@@ -288,7 +343,7 @@ export function playCard(scene){
 
                     console.log("出したカードのタイプ：" + getCardType(lastUsedCards));
                     console.log(lastUsedCards);
-                    
+
                 }
             },
         });
@@ -298,7 +353,7 @@ export function playCard(scene){
 }
 
 //カードのタイプを取得
-export function getCardType(cards){
+function getCardType(cards){
     let cardType = "";
 
     let cardsInfo = countCardsInfo(cards);
@@ -325,21 +380,11 @@ export function getCardType(cards){
         if (cardsInfo.maxSameCardCount === 3) {
             cardType = "three_with_single";
         }
-        //double pair
-        // if (cards[0].pointValue === cards[1].pointValue && cards[2].pointValue === cards[3].pointValue) {
-        //     cardType = "double_pair";
-        // }
 
         //bomb
         if (cards[0].pointValue === cards[1].pointValue && cards[0].pointValue === cards[2].pointValue && cards[0].pointValue === cards[3].pointValue) {
             cardType = "bomb";
         }
-
-        //straight pair
-        if (cards[0].pointValue === cards[1].pointValue && cards[2].pointValue === cards[3].pointValue && cards[0].pointValue === (cards[2].pointValue - 1) && cards[2].pointValue <= 14 ) {
-            cardType = "straight_pair";
-        }
-
     } else if (cards.length >= 5) {
         if (cards.length === 5) {
             //three with pair
@@ -366,16 +411,29 @@ export function getCardType(cards){
             }
             //tripple staright pair
             if (cardsInfo.maxSameCardCount === 3) {
-                let isStraight = true;
-                for (let i = 0; i < cards.length - 1; i++) {
-                    if ((cards[i].pointValue !== cards[i + 1].pointValue - 1) || (cards[i].pointValue > 14)) {
-                        isStraight = false;
-                        break;
+                let isStraight = false;
+                Object.keys(cardsInfo.cardsInfoArr).forEach((key) => {
+                    if (cardsInfo.cardsInfoArr[key] == 3 && cardsInfo.cardsInfoArr[Number(key) + 1] == 3 && cardsInfo.cardsInfoArr[Number(key) + 2] == 3) {
+                        isStraight = true;
                     }
+                });
+                if (isStraight) {
+                    cardType = "tripple_pair";
                 }
-                ardType = "tripple_pair";
-                
             }
+            //double three
+            if (cardsInfo.maxSameCardCount === 3) {
+                let isDouble = false;
+                Object.keys(cardsInfo.cardsInfoArr).forEach((key) => {
+                    if (cardsInfo.cardsInfoArr[key] == 3 && cardsInfo.cardsInfoArr[Number(key) + 1] == 3) {
+                        isDouble = true;
+                    }
+                });
+                if (isDouble) {
+                    cardType = "double_three";
+                }
+            }
+
         }
         //straight
         if (cardType == "") {//カードのタイプが不明の場合
@@ -389,11 +447,11 @@ export function getCardType(cards){
     } else {
         //不明
     }
-    return cardType;    
+    return cardType;
 }
 
 //カードを出せるかをチェック
-export function playCheck(cards){
+function playCheck(cards){
     const arrBombType = ["bomb", "joker_bomb"];
     //枚数が一番多いカードの値と数を取得
     let cardsInfo = countCardsInfo(cards);
@@ -430,7 +488,7 @@ export function playCheck(cards){
 }
 
 //カードの統計情報を取得
-export function countCardsInfo(cards){
+function countCardsInfo(cards){
     let maxSameCardValue = 0;
     let maxSameCardCount = 0;
     let cardsInfo = {};
@@ -441,7 +499,7 @@ export function countCardsInfo(cards){
         } else {
             cardsInfoArr[card.pointValue] = 1;
         }
-        if (cardsInfoArr[card.pointValue] > maxSameCardCount) {
+        if (cardsInfoArr[card.pointValue] >= maxSameCardCount) {
             maxSameCardCount = cardsInfoArr[card.pointValue];
             maxSameCardValue = card.pointValue;
         }
@@ -453,7 +511,7 @@ export function countCardsInfo(cards){
 }
 
 //デッキを作成
-export function createDeck(scene){
+function createDeck(scene){
     //デッキのカードを作成
     let deckField_center_x = CONSTS.deckField.x + CONSTS.deckField.width / 2; //デッキの中心座標（X軸）
     let deckField_center_y = CONSTS.deckField.y + CONSTS.deckField.height / 2; //デッキの中心座標（Y軸）
@@ -464,56 +522,51 @@ export function createDeck(scene){
         deckCard.pointValue = card.value;
         deckData.push(deckCard);
     });
+
     //デッキの一番上に背面を表示
-    let deckBack = scene.add.image(deckField_center_x, deckField_center_y, "card_back_blue").setScale(0.2).setInteractive();
-
+    // let deckBack = scene.add.image(deckField_center_x, deckField_center_y, "card_back_blue").setScale(0.2).setInteractive();
     //背面のカードをクリックしたときカードを一枚引く
-    deckBack.on('pointerdown', () => {
-        if (gameOver) {
-            return;
-        }
+    // deckBack.on('pointerdown', () => {
+    //     if (gameOver) {
+    //         return;
+    //     }
 
-        //カードを引く
-        drawCard(scene, 1);
-    });
+    //     //カードを引く
+    //     drawCard(scene, 1);
+    // });
 }
 
 //デッキをシャッフル
-export function shuffleDeck(scene, cb = null){
-    Phaser.Utils.Array.Shuffle(deckData);
-    //シャッフルのアニメーション(カードをランダムな位置に移動し、デッキの中心に集める)
-    for (let i = 0; i < deckData.length; i++) {
-        let targetX = Phaser.Math.Between(
-            CONSTS.deckField.x + CONSTS.cardInfo.width, //左余白
-            CONSTS.deckField.x + CONSTS.deckField.width - CONSTS.cardInfo.width //右余白
-        );
-        let targetY = Phaser.Math.Between(
-            CONSTS.deckField.y + 50, //上余白
-            CONSTS.deckField.y + CONSTS.deckField.height - 50 //下余白
-        );
-
-        //アニメーションを追加
-        scene.tweens.add({
-            targets: deckData[i],
-            x: targetX, //目標のX座標
-            y: targetY, //目標のY座標
-            ease: 'Power2', //イージング
-            duration: 500, //移動にかける時間（ミリ秒）
-            yoyo: true, //リピート
-            onComplete: () => {//移動完了後に実行される処理
-            //全てのアニメーションが終了したらコールバック関数を実行
-                if ((i === deckData.length - 1) && cb) {
-                    cb();
-                }
-            },
-        });
-
+function shuffleDeck(scene, nowNum = 0 ,cb = null){
+    if (nowNum >= 5 || nowNum >= deckData.length) {//アニメーション回数が5回以上、またはデッキの枚数以上の場合、シャッフル終了
+        Phaser.Utils.Array.Shuffle(deckData); //シャッフル
+        if (cb) {
+            cb();
+        }
+        return;
     }
+    let targetX = CONSTS.deckField.x + CONSTS.deckField.width;
+    //アニメーションを追加
+    scene.tweens.add({
+        targets: deckData[nowNum],
+        x: targetX, //目標のX座標
+        ease: 'Power2', //イージング
+        duration: 100, //移動にかける時間（ミリ秒）
+        yoyo: true, //リピート
+        onComplete: () => {//移動完了後に実行される処理
+            //全てのアニメーションが終了したらコールバック関数を実行
+            if (cb) {
+                shuffleDeck(scene, nowNum + 1, cb);
+            } else {
+                shuffleDeck(scene, nowNum + 1);
+            }
+        },
+    });
 }
 
 //フィールドを作成
-export function createField(scene){
-    //デッキのフィールドを作成
+function createField(scene){
+    //**********デッキのフィールドを作成**********//
     const deckGraphics = scene.add.graphics();
 
     //フィールドのデザインを設定
@@ -534,7 +587,7 @@ export function createField(scene){
         CONSTS.deckField.height
     );
 
-    //フィールドを作成
+    //**********出したカードのフィールドを作成**********//
     const fieldGraphics = scene.add.graphics();
 
     //フィールドのデザインを設定
@@ -555,7 +608,7 @@ export function createField(scene){
         CONSTS.usedCardField.height
     );
 
-    //最後に出したカードのフィールドを作成
+    //**********最後に出したカードのフィールドを作成**********//
     const lastUsedCardFieldGraphics = scene.add.graphics();
 
     //フィールドのデザインを設定
@@ -575,10 +628,52 @@ export function createField(scene){
         CONSTS.lastUsedCardField.width,
         CONSTS.lastUsedCardField.height
     );
+
+    //**********左プレーヤーのフィルドを作成**********//
+    const leftPlayerFieldGraphics = scene.add.graphics();
+
+    //フィールドのデザインを設定
+    leftPlayerFieldGraphics.fillStyle(0x000000, 0.5); //RGBAで50%の透明度
+    leftPlayerFieldGraphics.fillRect(
+        CONSTS.leftPlayerField.x,
+        CONSTS.leftPlayerField.y,
+        CONSTS.leftPlayerField.width,
+        CONSTS.leftPlayerField.height
+    );
+
+    //フィールドの境界線を描画（任意）
+    leftPlayerFieldGraphics.lineStyle(2, 0x000000, 1); //黒い線
+    leftPlayerFieldGraphics.strokeRect(
+        CONSTS.leftPlayerField.x,
+        CONSTS.leftPlayerField.y,
+        CONSTS.leftPlayerField.width,
+        CONSTS.leftPlayerField.height
+    );
+
+    //**********右プレーヤーのフィルドを作成**********//
+    const rightPlayerFieldGraphics = scene.add.graphics();
+
+    //フィールドのデザインを設定
+    rightPlayerFieldGraphics.fillStyle(0x000000, 0.5); //RGBAで50%の透明度
+    rightPlayerFieldGraphics.fillRect(
+        CONSTS.rightPlayerField.x,
+        CONSTS.rightPlayerField.y,
+        CONSTS.rightPlayerField.width,
+        CONSTS.rightPlayerField.height
+    );
+    //フィールドの境界線を描画（任意）
+    rightPlayerFieldGraphics.lineStyle(2, 0x000000, 1); //黒い線
+    rightPlayerFieldGraphics.strokeRect(
+        CONSTS.rightPlayerField.x,
+        CONSTS.rightPlayerField.y,
+        CONSTS.rightPlayerField.width,
+        CONSTS.rightPlayerField.height
+    );
+
 }
 
 //ボタン作成
-export function createButton(scene){
+function createButton(scene){
     //手札が0枚の場合、ボタンを消す
     if (myCards.length === 0) {
         if (okBtn) {
@@ -610,6 +705,110 @@ export function createButton(scene){
     okBtn.on(Phaser.Input.Events.POINTER_DOWN, () => {
         //カードを出す
         playCard(scene);
+        console.log( "出せるカードの種類" + getPlayableCards(myCards));
+    });
+}
+
+//出せるカードを取得する
+//戻り値：出せるカードの配列 => []
+//
+function getPlayableCards(cards) {
+    if (cards.length === 0) {
+        return "none";
+    }
+    // if(lastUsedCards.length === 0) {
+    //     return "any"
+    // }
+    let cardInfo = countCardsInfo(cards);
+
+    //手札のカードが出せる全てのタイプを配列に格納
+    let playableType = [];
+
+    //single
+    playableType.push("single");
+
+    let straight_count = 1;
+    Object.keys(cardInfo.cardsInfoArr).forEach((key) => {
+        let nextkey = Number(key) + 1;
+        let nextnextkey = Number(key) + 2;
+        //pair
+        if (cardInfo.cardsInfoArr[key] === 2) {
+            playableType.push("pair");
+            //joker bomb
+            if (key === 98 && nextkey === 99) {
+                playableType.push("joker_bomb");
+            }
+            //tripple straight pair
+            if ((nextkey in cardInfo.cardsInfoArr && cardInfo.cardsInfoArr[nextkey] === 2) &&
+                (nextnextkey in cardInfo.cardsInfoArr && cardInfo.cardsInfoArr[nextnextkey] === 2)) {
+                playableType.push("tripple_pair");
+            }
+        }
+        //three
+        if (cardInfo.cardsInfoArr[key] === 3) {
+            playableType.push("pair");
+            playableType.push("three");
+            if(cards.length > 3){
+                playableType.push("three_with_single");
+            }
+            //double three
+            if (nextkey in cardInfo.cardsInfoArr && cardInfo.cardsInfoArr[nextkey] === 3) {
+                playableType.push("double_three");
+            }
+        }
+        //bomb
+        if (cardInfo.cardsInfoArr[key] === 4) {
+            playableType.push("pair");
+            playableType.push("three");
+            playableType.push("bomb");
+        }
+        //straight
+        if (cardInfo.cardsInfoArr[Number(key)] >= 1 && cardInfo.cardsInfoArr[nextkey] >= 1) {//連続している場合
+            if (Number(key) < 14) {//14以上のカードはストレートに含めない
+                straight_count++;
+            }
+            if (straight_count >= 5) {
+                playableType.push("straight_for_" + straight_count);
+            }
+        } else {
+            straight_count = 1;
+        }
+    });
+    Object.keys(cardInfo.cardsInfoArr).forEach((key) => {
+        if (cardInfo.cardsInfoArr[key] === 2) {
+            //three with pair
+            if(cardInfo.maxSameCardCount === 3 && cardInfo.maxSameCardValue !== key){
+                playableType.push("three_with_pair");
+            }
+            //bomb with pair
+            if(cardInfo.maxSameCardCount === 4 && cardInfo.maxSameCardValue !== key){
+                playableType.push("bomb_with_pair");
+            }
+        }
     });
 
+    //重複を削除
+    playableType = [...new Set(playableType)];
+    return playableType;
+}
+
+//プレーヤー情報を表示
+function showOtherPlayerInfo(scene, player){
+    //プレーヤー名を表示
+    if (player.idObj) {//テキストが存在する場合、削除
+        player.idObj.destroy();
+    }
+    player.idObj = scene.add.text(player.position_x, player.position_y - 100, player.id, {
+        fontSize: '20px',
+        fill: '#fff'
+    }).setOrigin(0.5);
+
+    //カード枚数を表示
+    if (player.textObj) {//テキストが存在する場合、削除
+        player.textObj.destroy();
+    }
+    player.textObj = scene.add.text(player.position_x, player.position_y + 100, "Cards: " + player.myCards.length, {
+        fontSize: '20px',
+        fill: '#fff'
+    }).setOrigin(0.5);
 }

@@ -58,34 +58,46 @@ export const cardResourse = [
 
 //デッキのフィルド
 export const deckField = {
-    x : 1700,
-    y : 200,
+    x : 1540,
+    y : 30,
     width : 100,
     height : 145,
 }
 
 //出したカードのフィールド
 export const usedCardField = {
-    x : 200,
+    x : 240,
     y : 200,
     width : 1400,
     height : 300,
 }
 //最新カードフィルド
 export const lastUsedCardField = {
-    x : 50,
-    y : 200,
+    // x : 50,
+    // y : 200,
+    // width : 100,
+    // height : 145,
+    x : 240,
+    y : 30,
     width : 100,
     height : 145,
 }
 
 
-//相手カードのフィールド
-export const opponentCardField = {
-    x : 200,
+//左プレーヤーフィールド
+export const leftPlayerField = {
+    x : 20,
     y : 200,
-    width : 200,
-    height : 145,
+    width : 150,
+    height : 300,
+}
+
+//右プレーヤーフィールド
+export const rightPlayerField = {
+    x : 1750,
+    y : 200,
+    width : 150,
+    height : 300,
 }
 
 //カード情報

@@ -12,8 +12,8 @@ const config = {
         create: create
     },
     scale: {
-        mode: Phaser.Scale.FIT, // Automatically resize to fit the browser window
-        autoCenter: Phaser.Scale.CENTER_BOTH // Center the game horizontally and vertically
+        mode: Phaser.Scale.FIT, // 画面のサイズに合わせて拡大縮小
+        autoCenter: Phaser.Scale.CENTER_BOTH // ゲームを画面の中央に配置
     }
 };
 
