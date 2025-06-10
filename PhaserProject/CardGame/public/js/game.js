@@ -1,11 +1,13 @@
 import * as CONSTS from './const.js';
+import { Player } from './player.js';
+import { getSocket, getMyPlayerID } from './ClientCommon.js';
 
 let lastUsedCard = null; // 最後に出したカード
 let lastUsedCards =[]; // 最後に出したカードを格納する配列
 let okBtn = null; // OKボタン
 let deckData = []; // デッキのカードを格納する配列
 // let usedCards = []; // 出したカードの配列
-let myCards = []; // 手札を格納する配列
+let myCardsObj = []; // 手札を格納する配列
 let selectedCards = []; // 選択したカードの配列
 let gameOver = false;
 let playerMe = null;
@@ -20,20 +22,6 @@ let myCardField = {
     height : 145,
 }
 
-class Player{
-    constructor(id) {
-        this.id = id;
-        this.type = "local"; // local, robot, remote
-        this.position_x = 0; // プレイヤーのX座標
-        this.position_y = 0; // プレイヤーのY座標
-        this.myCards = [];
-        this.isMyturn = false;
-        this.status = "waiting"; // waiting, playing, gameover
-        this.textObj = null; // プレイヤーのテキストオブジェクト
-        this.idObj = null; // プレイヤーのIDオブジェクト
-    }
-}
-
 export function startGame(scene){
     //フィールドを作成
     createField(scene);
@@ -41,33 +29,67 @@ export function startGame(scene){
     //デッキを作成
     createDeck(scene);
 
-    //Player初期化
-    playerMe = new Player("me");
-    playerMe.type = "local";
-    playerMe.status = "playing";
-    playerLeft = new Player("left");
-    playerLeft.type = "robot";
-    playerLeft.status = "waiting";
-    playerLeft.position_x = CONSTS.leftPlayerField.x + CONSTS.leftPlayerField.width / 2;
-    playerLeft.position_y = CONSTS.leftPlayerField.y + CONSTS.leftPlayerField.height / 2;
-    playerRight = new Player("right");
-    playerRight.type = "robot";
-    playerRight.status = "waiting";
-    playerRight.position_x = CONSTS.rightPlayerField.x + CONSTS.rightPlayerField.width / 2;
-    playerRight.position_y = CONSTS.rightPlayerField.y + CONSTS.rightPlayerField.height / 2;
+    // 共通socketを取得
+    const socket = getSocket();
 
-
-    // console.log(playerMe);
-    // console.log(playerLeft);
-
-    //playerRight = new Player("right");
+    //サーバからプレイヤー情報を取得
+    socket.emit("getAllPlayerInfo", socket.id);
+    //プレイヤー情報を受信
+    let players = [];
+    socket.off("allPlayerInfo"); // Remove existing listener
+    socket.on("allPlayerInfo", (data) => {
+        players = JSON.parse(data);
+        console.log("Players:", players);
+        //プレイヤー情報を設定
+        players.forEach((player) => {
+            if (player.id === getMyPlayerID()) {//自分のプレーヤー
+                playerMe = new Player(player.id);
+                playerMe.type = player.type;
+                playerMe.status = player.status;
+            } else {
+                if (!playerLeft) {//左側のプレーヤー
+                    playerLeft = new Player(player.id);
+                    playerLeft.type = player.type;
+                    playerLeft.status = player.status;
+                    playerLeft.position_x = CONSTS.leftPlayerField.x + CONSTS.leftPlayerField.width / 2;
+                    playerLeft.position_y = CONSTS.leftPlayerField.y + CONSTS.leftPlayerField.height / 2;
+                } else if (!playerRight) {//右側のプレーヤー
+                    playerRight = new Player(player.id);
+                    playerRight.type = player.type;
+                    playerRight.status = player.status;
+                    playerRight.position_x = CONSTS.rightPlayerField.x + CONSTS.rightPlayerField.width / 2;
+                    playerRight.position_y = CONSTS.rightPlayerField.y + CONSTS.rightPlayerField.height / 2;
+                } else {
+                    //それ以外のプレーヤーは無視
+                }
+            }
+        });
+    });
 
     //デッキをシャッフル
     shuffleDeck(scene, 0, () => {
-        //シャッフル完了後、各ユーザーがカードを13枚まで引く
-        drawCard(scene, 13, playerMe);
-        drawCard(scene, 13, playerLeft);
-        drawCard(scene, 13, playerRight);
+        // 3人分のdrawCardが終わったら呼ばれるコールバック
+        let finishedCount = 0;
+        function onDrawFinished() {
+            finishedCount++;
+            if (finishedCount === 3) {
+                // 全員分のdrawCardが終わったら送信
+                if (playerMe.type == "host") {
+                    socket.emit("updatePlayersCards", JSON.stringify(
+                        {
+                            [playerMe.id]: playerMe.myCards,
+                            [playerLeft.id]: playerLeft.myCards,
+                            [playerRight.id]: playerRight.myCards,
+                        }
+                    ));
+                    console.log("自分の手札：");
+                    console.log(playerMe.myCards);
+                }
+            }
+        }
+        drawCard(scene, 17, playerMe, 0, onDrawFinished);
+        drawCard(scene, 17, playerLeft, 0, onDrawFinished);
+        drawCard(scene, 17, playerRight, 0, onDrawFinished);
     });
 }
 
@@ -75,11 +97,14 @@ export function startGame(scene){
 //scene：シーン
 //drawNum：引く枚数
 //戻り値：なし
-function drawCard(scene ,drawNum , player, nowNum = 0){
-    if (player.type != "local"){//自分以外のプレーヤー
+function drawCard(scene ,drawNum , player, nowNum = 0 , cb = null) {
+    if (player.id != getMyPlayerID()){//自分以外のプレーヤー
         if (nowNum >= drawNum) {//ドロー終了
             //手札をソート
-            sortCard(player.myCards, "pointValue", "asc");
+            sortCard(player.myCardsObj, "pointValue", "asc");
+            //プレーヤのカード情報を更新
+            player.updateMyCardsFromObj();
+            if (cb) cb(); // コールバック呼び出し
             return;
         }
 
@@ -89,7 +114,7 @@ function drawCard(scene ,drawNum , player, nowNum = 0){
             console.log("デッキが空です");
             return;
         }
-        player.myCards.push(card);//手札に追加
+        player.myCardsObj.push(card);//手札に追加
 
         // カードを引いたときのアニメーション
         scene.tweens.add({
@@ -102,22 +127,26 @@ function drawCard(scene ,drawNum , player, nowNum = 0){
                 //プレーヤー情報を表示
                 showOtherPlayerInfo(scene, player);
                 //再帰処理
-                drawCard(scene, drawNum, player, nowNum + 1);
+                drawCard(scene, drawNum, player, nowNum + 1, cb);
             },
         });
     } else {//自分のプレーヤー
         if (nowNum >= drawNum) {//ドロー終了
             //手札をソート
-            sortCard(myCards, "pointValue", "asc");
+            sortCard(myCardsObj, "pointValue", "asc");
             //手札の位置を再調整する
             adjustMyCardPosition(scene);
-            playerMe.myCards = myCards;//手札を自分のプレーヤーに設定
-            console.log(player.type + "出せるカードの種類" + getPlayableCards(myCards));
+            //手札を自分のプレーヤーに設定
+            playerMe.myCardsObj = myCardsObj;
+            //プレーヤのカード情報を更新
+            playerMe.updateMyCardsFromObj();
+            console.log(playerMe.type + "出せるカードの種類" + getPlayableCards(myCardsObj));
+            if (cb) cb(); // コールバック呼び出し
             return;
         }
 
         //引く枚数より、手札フィルドの幅を計算
-        let myCardFiledWidth = myCards.length * CONSTS.cardInfo.width ;//手札フィールドの幅
+        let myCardFiledWidth = myCardsObj.length * CONSTS.cardInfo.width ;//手札フィールドの幅
         //手札フィールドの開始座標（x座標）
         let myCardFieldStartX = scene.cameras.main.width / 2 - myCardFiledWidth / 2;
         //デッキのカードを引く
@@ -129,7 +158,7 @@ function drawCard(scene ,drawNum , player, nowNum = 0){
         //カードを最前面に移動
         scene.children.bringToTop(card);
         //カードを手札に移動する時のX座標を計算(現在手札の一番右のカードのX座標 + 100)
-        let targetX = myCardFieldStartX + CONSTS.cardInfo.width * (myCards.length);
+        let targetX = myCardFieldStartX + CONSTS.cardInfo.width * (myCardsObj.length);
         //カードの正面を表示
         card.setTexture(card.key);
         // カードを引いたときのアニメーション
@@ -145,7 +174,7 @@ function drawCard(scene ,drawNum , player, nowNum = 0){
                 //手札のカードの位置を再調整する
                 adjustMyCardPosition(scene);
                 //再帰処理
-                drawCard(scene, drawNum, player, nowNum + 1);
+                drawCard(scene, drawNum, player, nowNum + 1, cb);
             },
         });
     }
@@ -153,33 +182,33 @@ function drawCard(scene ,drawNum , player, nowNum = 0){
 
 //手札のカードの位置を再調整する
 function adjustMyCardPosition(scene, cb = null){
-    if  (myCards.length === 0) {
+    if  (myCardsObj.length === 0) {
         //ボタンを作成（削除）
         createButton(scene);
         return;
     }
 
     //手札フィールドの幅を計算
-    let myCardFiledWidth = myCards.length * CONSTS.cardInfo.width;
+    let myCardFiledWidth = myCardsObj.length * CONSTS.cardInfo.width;
     //手札フィールドの開始座標（x座標）
     let myCardFieldStartX = scene.cameras.main.width / 2 - myCardFiledWidth / 2;
     //手札フィルド属性を更新
     myCardField.x = myCardFieldStartX;
     myCardField.width = myCardFiledWidth;
 
-    for (let i = 0; i < myCards.length; i++) {
+    for (let i = 0; i < myCardsObj.length; i++) {
         let targetX = myCardFieldStartX + CONSTS.cardInfo.width * i;
 
         // アニメーション
         scene.tweens.add({
-            targets: myCards[i],
+            targets: myCardsObj[i],
             x: targetX, // 目標のX座標
             y: myCardField.y, // 目標のY座標
             ease: 'Power2', // イージング
             duration: 500, // 移動にかける時間（ミリ秒）
             onComplete: () => {// 移動完了後に実行される処理
                 //全てのアニメーションが終了したら
-                if ((i === myCards.length - 1)) {
+                if ((i === myCardsObj.length - 1)) {
                     //ボタンを作成
                     createButton(scene);
                     //コールバック関数を実行
@@ -197,7 +226,7 @@ function createCard(scene, card) {
     //カスタムプロパティ
     card.originalY = card.y;// 元のY座標
     card.isSelect = false;// 選択状態
-    card.showNo = myCards.length + 1;// 手札の表示番号
+    card.showNo = myCardsObj.length + 1;// 手札の表示番号
 
     //カードをインタラクティブに設定
     card.setInteractive();
@@ -226,7 +255,7 @@ function createCard(scene, card) {
     });
 
     // 手札に追加
-    myCards.push(card);
+    myCardsObj.push(card);
     return card;
 }
 
@@ -283,7 +312,7 @@ function playCard(scene){
         // usedCards.push(card);
 
         //手札から削除
-        myCards = myCards.filter((c) => c !== card);
+        myCardsObj = myCardsObj.filter((c) => c !== card);
 
         //カードのイベントを無効化
         card.disableInteractive();
@@ -520,6 +549,7 @@ function createDeck(scene){
         let deckCard = scene.add.image(deckField_center_x, deckField_center_y, "card_back_blue").setScale(0.2);
         deckCard.key = card.key;
         deckCard.pointValue = card.value;
+        deckCard.type = card.type; // カードのタイプを追加
         deckData.push(deckCard);
     });
 
@@ -672,15 +702,14 @@ function createField(scene){
 
 }
 
-//ボタン作成
+//OKボタン作成
 function createButton(scene){
-    //手札が0枚の場合、ボタンを消す
-    if (myCards.length === 0) {
+    //手札が0枚,または自分が待ち状態の場合、ボタンを消す
+    if (myCardsObj.length === 0 || playerMe.status === "waiting") {
+        //ボタンを削除
         if (okBtn) {
-            if (okBtn) {
-                okBtn.destroy();
-                okBtn = null;
-            }
+            okBtn.destroy();
+            okBtn = null;
         }
         return;
     }
@@ -705,16 +734,15 @@ function createButton(scene){
     okBtn.on(Phaser.Input.Events.POINTER_DOWN, () => {
         //カードを出す
         playCard(scene);
-        console.log( "出せるカードの種類" + getPlayableCards(myCards));
+        console.log( "出せるカードの種類" + getPlayableCards(myCardsObj));
     });
 }
 
 //出せるカードを取得する
 //戻り値：出せるカードの配列 => []
-//
 function getPlayableCards(cards) {
     if (cards.length === 0) {
-        return "none";
+        return [];
     }
     // if(lastUsedCards.length === 0) {
     //     return "any"
@@ -807,7 +835,7 @@ function showOtherPlayerInfo(scene, player){
     if (player.textObj) {//テキストが存在する場合、削除
         player.textObj.destroy();
     }
-    player.textObj = scene.add.text(player.position_x, player.position_y + 100, "Cards: " + player.myCards.length, {
+    player.textObj = scene.add.text(player.position_x, player.position_y + 100, "Cards: " + player.myCardsObj.length, {
         fontSize: '20px',
         fill: '#fff'
     }).setOrigin(0.5);

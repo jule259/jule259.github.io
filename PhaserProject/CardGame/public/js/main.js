@@ -1,5 +1,6 @@
 import * as CONSTS from './const.js';
 import { startGame } from './game.js';
+import { getSocket, getMyPlayerID, setMyPlayerID } from './ClientCommon.js';
 
 const config = {
     type: Phaser.AUTO,
@@ -16,6 +17,7 @@ const config = {
         autoCenter: Phaser.Scale.CENTER_BOTH // ゲームを画面の中央に配置
     }
 };
+
 
 var game = new Phaser.Game(config);
 
@@ -37,6 +39,21 @@ function preload ()
 
 function create ()
 {
+    // 共通socketを取得
+    const socket = getSocket();
+    socket.on('connect', () => {
+        console.log('Connected to server with ID:', socket.id);
+        // プレイヤーを追加するイベントをサーバに送信
+        socket.emit("addPlayer");
+        // ロボットプレイヤーを追加するイベントをサーバに送信(仮で2体追加)
+        socket.emit("addRobotPlayer"); // ロボットプレイヤーを追加
+        socket.emit("addRobotPlayer"); // ロボットプレイヤーを追加
+    });
+    socket.on('playerAdded', (playerID) => {
+        setMyPlayerID(playerID); // プレイヤーIDを保存
+        console.log("Player added with ID:", getMyPlayerID());
+    });
+
     //メニュー画面
     // const titleText = this.add.text(this.sys.game.scale.width / 2, this.sys.game.scale.height / 2,
     //     "Card Game\nClick to Play",
