@@ -1,5 +1,5 @@
 
-export const cardResourse = [
+export const cardResource = [
     {key : "10_of_clubs", path : "assets/10_of_clubs.png", value : 10, type: "clubs"},
     {key : "10_of_diamonds", path : "assets/10_of_diamonds.png", value : 10, type: "diamonds"},
     {key : "10_of_hearts", path : "assets/10_of_hearts.png", value : 10, type: "hearts"},
@@ -56,7 +56,7 @@ export const cardResourse = [
     {key : "red_joker", path : "assets/red_joker.png", value : 99, type: "joker"}
 ];
 
-//デッキのフィルド
+//デッキのフィールド
 export const deckField = {
     x : 1540,
     y : 30,
@@ -105,3 +105,9 @@ export const cardInfo = {
     width : 100,
     height : 145,
 }
+
+export const gameStatus = {
+    WAITING_FOR_START: "1",
+    WAITING_FOR_PLAYERS: "2",
+    GAME_STARTED: "3"
+};

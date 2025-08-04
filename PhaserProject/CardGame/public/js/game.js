@@ -1,20 +1,17 @@
 import * as CONSTS from './const.js';
 import { Player } from './player.js';
-import { getSocket, getMyPlayerID } from './ClientCommon.js';
+import { getSocket, getMyPlayerID, setPlayers, getPlayerMe, setPlayerMe} from './ClientCommon.js';
 
 let lastUsedCard = null; // 最後に出したカード
 let lastUsedCards =[]; // 最後に出したカードを格納する配列
 let okBtn = null; // OKボタン
-let deckData = []; // デッキのカードを格納する配列
+export let deckData = []; // デッキのカードを格納する配列
 // let usedCards = []; // 出したカードの配列
 let myCardsObj = []; // 手札を格納する配列
 let selectedCards = []; // 選択したカードの配列
 let gameOver = false;
-let playerMe = null;
-let playerLeft = null;
-let playerRight = null;
 
-//手札カードフィルド
+//手札カードフィールド
 let myCardField = {
     x : 200,
     y : 600,
@@ -23,29 +20,32 @@ let myCardField = {
 }
 
 export function startGame(scene){
-    //フィールドを作成
-    createField(scene);
-
-    //デッキを作成
-    createDeck(scene);
-
     // 共通socketを取得
     const socket = getSocket();
 
+    //デッキを作成
+    // createDeck(scene);
+    let playerMe = null;
+    let playerLeft = null;
+    let playerRight = null;
+    let players = [];
     //サーバからプレイヤー情報を取得
     socket.emit("getAllPlayerInfo", socket.id);
     //プレイヤー情報を受信
-    let players = [];
-    socket.off("allPlayerInfo"); // Remove existing listener
+
+    //socket.off("allPlayerInfo"); // Remove existing listener
+    let playersData = [];
     socket.on("allPlayerInfo", (data) => {
-        players = JSON.parse(data);
-        console.log("Players:", players);
+        playersData = JSON.parse(data);
+        console.log("PlayersData:", playersData);
         //プレイヤー情報を設定
-        players.forEach((player) => {
+        playersData.forEach((player) => {
             if (player.id === getMyPlayerID()) {//自分のプレーヤー
                 playerMe = new Player(player.id);
                 playerMe.type = player.type;
                 playerMe.status = player.status;
+                setPlayerMe(playerMe); // 自分のプレイヤー情報を保存
+                players.push(playerMe);
             } else {
                 if (!playerLeft) {//左側のプレーヤー
                     playerLeft = new Player(player.id);
@@ -53,51 +53,63 @@ export function startGame(scene){
                     playerLeft.status = player.status;
                     playerLeft.position_x = CONSTS.leftPlayerField.x + CONSTS.leftPlayerField.width / 2;
                     playerLeft.position_y = CONSTS.leftPlayerField.y + CONSTS.leftPlayerField.height / 2;
+                    players.push(playerLeft);
                 } else if (!playerRight) {//右側のプレーヤー
                     playerRight = new Player(player.id);
                     playerRight.type = player.type;
                     playerRight.status = player.status;
                     playerRight.position_x = CONSTS.rightPlayerField.x + CONSTS.rightPlayerField.width / 2;
                     playerRight.position_y = CONSTS.rightPlayerField.y + CONSTS.rightPlayerField.height / 2;
+                    players.push(playerRight);
                 } else {
                     //それ以外のプレーヤーは無視
                 }
             }
         });
+        setPlayers(players); // プレイヤー情報を保存
+        console.log("全プレーヤー情報：", players);
+
+        //プレーヤ初期化完了後、サーバへ通信
+        socket.emit("PlayersInitialized", playerMe.id);
     });
 
-    //デッキをシャッフル
-    shuffleDeck(scene, 0, () => {
-        // 3人分のdrawCardが終わったら呼ばれるコールバック
-        let finishedCount = 0;
-        function onDrawFinished() {
-            finishedCount++;
-            if (finishedCount === 3) {
-                // 全員分のdrawCardが終わったら送信
-                if (playerMe.type == "host") {
-                    socket.emit("updatePlayersCards", JSON.stringify(
-                        {
-                            [playerMe.id]: playerMe.myCards,
-                            [playerLeft.id]: playerLeft.myCards,
-                            [playerRight.id]: playerRight.myCards,
-                        }
-                    ));
-                    console.log("自分の手札：");
-                    console.log(playerMe.myCards);
-                }
-            }
-        }
-        drawCard(scene, 17, playerMe, 0, onDrawFinished);
-        drawCard(scene, 17, playerLeft, 0, onDrawFinished);
-        drawCard(scene, 17, playerRight, 0, onDrawFinished);
-    });
+
+
+    // //デッキをシャッフルし、カードを引く
+    // shuffleDeck(scene, 0, () => {
+    //     // 3人分のdrawCardが終わったら呼ばれるコールバック
+    //     let finishedCount = 0;
+    //     function onDrawFinished() {
+    //         finishedCount++;
+    //         if (finishedCount === 3) {
+    //             // 全員分のdrawCardが終わったら送信
+    //             if (playerMe.type == "host") {
+    //                 socket.emit("updatePlayersCards", JSON.stringify(
+    //                     {
+    //                         [playerMe.id]: playerMe.myCards,
+    //                         [playerLeft.id]: playerLeft.myCards,
+    //                         [playerRight.id]: playerRight.myCards,
+    //                     }
+    //                 ));
+    //                 console.log("自分の手札：");
+    //                 console.log(playerMe.myCards);
+    //             }
+    //         }
+    //     }
+    //     drawCard(scene, 17, playerMe, 0, onDrawFinished);
+    //     drawCard(scene, 17, playerLeft, 0, onDrawFinished);
+    //     drawCard(scene, 17, playerRight, 0, onDrawFinished);
+    // });
 }
 
 //カードを引く
 //scene：シーン
 //drawNum：引く枚数
+//player：プレーヤーオブジェクト
+//nowNum：現在の引いた枚数（初期値は0）
+//cardArr：引くカードの配列（初期値は空オブジェクト）
 //戻り値：なし
-function drawCard(scene ,drawNum , player, nowNum = 0 , cb = null) {
+export function drawCard(scene , drawNum , player, nowNum = 0 , cardArr = {}, cb = null) {
     if (player.id != getMyPlayerID()){//自分以外のプレーヤー
         if (nowNum >= drawNum) {//ドロー終了
             //手札をソート
@@ -108,11 +120,24 @@ function drawCard(scene ,drawNum , player, nowNum = 0 , cb = null) {
             return;
         }
 
+        let card = null; // 引くカードを初期化
         //デッキのカードを引く
-        let card = deckData.pop();
-        if (!card) {
-            console.log("デッキが空です");
-            return;
+        if (cardArr && cardArr.length > 0) {//引くカードの配列がある場合
+           let cardKey = cardArr[nowNum].key;
+            // 引くカードのキーを使ってデッキからカードを取得
+            card = deckData.find(c => c.key === cardKey);
+            if (!card) {
+                console.log("デッキにカードがありません");
+                return;
+            }
+            // デッキからカードを削除
+            deckData = deckData.filter(c => c.key !== cardKey);
+        } else {
+            card = deckData.pop();
+            if (!card) {
+                console.log("デッキが空です");
+                return;
+            }
         }
         player.myCardsObj.push(card);//手札に追加
 
@@ -127,10 +152,11 @@ function drawCard(scene ,drawNum , player, nowNum = 0 , cb = null) {
                 //プレーヤー情報を表示
                 showOtherPlayerInfo(scene, player);
                 //再帰処理
-                drawCard(scene, drawNum, player, nowNum + 1, cb);
+                drawCard(scene, drawNum, player, nowNum + 1, cardArr, cb);
             },
         });
     } else {//自分のプレーヤー
+        let playerMe = getPlayerMe();
         if (nowNum >= drawNum) {//ドロー終了
             //手札をソート
             sortCard(myCardsObj, "pointValue", "asc");
@@ -149,11 +175,25 @@ function drawCard(scene ,drawNum , player, nowNum = 0 , cb = null) {
         let myCardFiledWidth = myCardsObj.length * CONSTS.cardInfo.width ;//手札フィールドの幅
         //手札フィールドの開始座標（x座標）
         let myCardFieldStartX = scene.cameras.main.width / 2 - myCardFiledWidth / 2;
+
+        let card = null; // 引くカードを初期化
         //デッキのカードを引く
-        let card = deckData.pop();
-        if (!card) {
-            console.log("デッキが空です");
-            return;
+        if (cardArr && cardArr.length > 0) {//引くカードの配列がある場合
+            let cardKey = cardArr[nowNum].key;
+            // 引くカードのキーを使ってデッキからカードを取得
+            card = deckData.find(c => c.key === cardKey);
+            if (!card) {
+                console.log("デッキにカードがありません");
+                return;
+            }
+            // デッキからカードを削除
+            deckData = deckData.filter(c => c.key !== cardKey);
+        } else {
+            card = deckData.pop();
+            if (!card) {
+                console.log("デッキが空です");
+                return;
+            }
         }
         //カードを最前面に移動
         scene.children.bringToTop(card);
@@ -174,7 +214,7 @@ function drawCard(scene ,drawNum , player, nowNum = 0 , cb = null) {
                 //手札のカードの位置を再調整する
                 adjustMyCardPosition(scene);
                 //再帰処理
-                drawCard(scene, drawNum, player, nowNum + 1, cb);
+                drawCard(scene, drawNum, player, nowNum + 1, cardArr, cb);
             },
         });
     }
@@ -540,18 +580,29 @@ function countCardsInfo(cards){
 }
 
 //デッキを作成
-function createDeck(scene){
+export function createDeck(scene, deck){
+    //デッキのカードを初期化
+    deckData = [];
     //デッキのカードを作成
     let deckField_center_x = CONSTS.deckField.x + CONSTS.deckField.width / 2; //デッキの中心座標（X軸）
     let deckField_center_y = CONSTS.deckField.y + CONSTS.deckField.height / 2; //デッキの中心座標（Y軸）
 
-    CONSTS.cardResourse.forEach((card) => {
+    //デッキのカードを追加
+    deck.forEach((card) => {
         let deckCard = scene.add.image(deckField_center_x, deckField_center_y, "card_back_blue").setScale(0.2);
         deckCard.key = card.key;
         deckCard.pointValue = card.value;
         deckCard.type = card.type; // カードのタイプを追加
         deckData.push(deckCard);
     });
+
+    // CONSTS.cardResource.forEach((card) => {
+        //     let deckCard = scene.add.image(deckField_center_x, deckField_center_y, "card_back_blue").setScale(0.2);
+        //     deckCard.key = card.key;
+        //     deckCard.pointValue = card.value;
+        //     deckCard.type = card.type; // カードのタイプを追加
+        //     deckData.push(deckCard);
+    // });
 
     //デッキの一番上に背面を表示
     // let deckBack = scene.add.image(deckField_center_x, deckField_center_y, "card_back_blue").setScale(0.2).setInteractive();
@@ -566,10 +617,10 @@ function createDeck(scene){
     // });
 }
 
-//デッキをシャッフル
-function shuffleDeck(scene, nowNum = 0 ,cb = null){
+//デッキをシャッフル（アニメーションのみ）
+export function shuffleDeck(scene, nowNum = 0 ,cb = null){
     if (nowNum >= 5 || nowNum >= deckData.length) {//アニメーション回数が5回以上、またはデッキの枚数以上の場合、シャッフル終了
-        Phaser.Utils.Array.Shuffle(deckData); //シャッフル
+        //Phaser.Utils.Array.Shuffle(deckData); //シャッフル
         if (cb) {
             cb();
         }
@@ -595,7 +646,7 @@ function shuffleDeck(scene, nowNum = 0 ,cb = null){
 }
 
 //フィールドを作成
-function createField(scene){
+export function createField(scene){
     //**********デッキのフィールドを作成**********//
     const deckGraphics = scene.add.graphics();
 
@@ -704,6 +755,7 @@ function createField(scene){
 
 //OKボタン作成
 function createButton(scene){
+    let playerMe = getPlayerMe();
     //手札が0枚,または自分が待ち状態の場合、ボタンを消す
     if (myCardsObj.length === 0 || playerMe.status === "waiting") {
         //ボタンを削除
@@ -839,4 +891,31 @@ function showOtherPlayerInfo(scene, player){
         fontSize: '20px',
         fill: '#fff'
     }).setOrigin(0.5);
+}
+
+// ゲーム開始をまつとき、画面に「waiting for players」と表示
+export function waitingForPlayers(scene) {
+    console.log("Waiting for players...");
+    
+    // 画面中央にテキストを表示
+    const waitingText = scene.add.text(
+        scene.cameras.main.width / 2,
+        scene.cameras.main.height / 2,
+        'Waiting for players...',
+        {
+            fontSize: '32px',
+            fill: '#fff'
+        }
+    ).setOrigin(0.5);
+
+    const socket = getSocket();
+
+    console.log ("Socket initialized:", socket.id);
+    // Promiseでゲーム開始を待つ
+    return new Promise((resolve) => {
+        socket.on("startGame", () => {
+            waitingText.destroy(); // テキストを削除
+            resolve(); // ゲーム開始！
+        });
+    });
 }

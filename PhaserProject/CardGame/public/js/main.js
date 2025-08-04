@@ -1,6 +1,6 @@
 import * as CONSTS from './const.js';
-import { startGame } from './game.js';
-import { getSocket, getMyPlayerID, setMyPlayerID } from './ClientCommon.js';
+import { startGame, createField, waitingForPlayers, createDeck, shuffleDeck, drawCard , deckData} from './game.js';
+import { getSocket, getMyPlayerID, setMyPlayerID, getPlayers } from './ClientCommon.js';
 
 const config = {
     type: Phaser.AUTO,
@@ -10,7 +10,8 @@ const config = {
     parent: "game",
     scene: {
         preload: preload,
-        create: create
+        create: create,
+        update: update
     },
     scale: {
         mode: Phaser.Scale.FIT, // 画面のサイズに合わせて拡大縮小
@@ -18,13 +19,16 @@ const config = {
     }
 };
 
+let isWaiting = false; // すでに待機処理を呼んだかどうかのフラグ
+var gameStatus = CONSTS.gameStatus.WAITING_FOR_START; // ゲームの初期状態を設定
+
 
 var game = new Phaser.Game(config);
 
 function preload ()
 {
     //カードの正面
-    CONSTS.cardResourse.forEach((card) => {
+    CONSTS.cardResource.forEach((card) => {
         this.load.image(card.key, card.path);
     });
 
@@ -43,11 +47,14 @@ function create ()
     const socket = getSocket();
     socket.on('connect', () => {
         console.log('Connected to server with ID:', socket.id);
-        // プレイヤーを追加するイベントをサーバに送信
-        socket.emit("addPlayer");
-        // ロボットプレイヤーを追加するイベントをサーバに送信(仮で2体追加)
-        socket.emit("addRobotPlayer"); // ロボットプレイヤーを追加
-        socket.emit("addRobotPlayer"); // ロボットプレイヤーを追加
+        let playerCount = getPlayers().length;
+        if (playerCount === 0) {// プレーヤーがいない場合、プレイヤーを追加する
+            // プレイヤーを追加するイベントをサーバに送信
+            socket.emit("addPlayer");
+            // ロボットプレイヤーを追加するイベントをサーバに送信(仮で2体追加)
+            // socket.emit("addRobotPlayer"); // ロボットプレイヤーを追加
+            // socket.emit("addRobotPlayer"); // ロボットプレイヤーを追加
+        }
     });
     socket.on('playerAdded', (playerID) => {
         setMyPlayerID(playerID); // プレイヤーIDを保存
@@ -90,7 +97,56 @@ function create ()
     //     })
     // });
 
-    startGame(this);
+    // デッキ情報を取得
+    socket.on('deckInfo', (deck) => {
+        // サーバのデッキ情報を基にデッキを作成する
+        console.log("Deck received from server:", deck);
+        createDeck(this, JSON.parse(deck));
+        //console.log("Deck created with cards:", deckData);
+        shuffleDeck(this); // デッキをシャッフル
+        socket.emit("deckShuffled"); // シャッフル後のデッキをサーバに送信
+    });
 
+    socket.on('cardsDrawn', (data) => {
+        // クライアントに引いたカードを表示する処理
+        console.log("Cards drawn from server:", data);
+        let playerID = data.playerId;
+        let drawnCards = data.drawnCards;
+        let players = getPlayers();
+        let player = players.find(p => p.id === playerID);
+        if (player) {
+            // プレイヤーの手札に引いたカードを追加
+            drawCard(this, drawnCards.length, player, 0, drawnCards);
+        } else {
+            console.error(`Player with ID ${playerID} not found.`);
+        }
+    });
+
+    createField(this);
+
+    //キーボードの「R」キー押下時ロボットプレイヤーを追加
+    this.input.keyboard.addKey("R").on("down", () => {
+        const playerCount = getPlayers().length;
+        console.log("Adding robot player, current player count:", playerCount);
+        if (playerCount < 3) { // 最大3人までロボットプレイヤーを追加
+            socket.emit("addRobotPlayer"); // ロボットプレイヤーを追加
+            console.log("Robot player added");
+        } else {
+            console.log("Maximum number of players reached");
+        }
+    });
+
+
+    // 非同期でゲーム開始を待つ
+    waitingForPlayers(this).then(() => {
+        // サーバーからstartGameイベントが送られたときの処理
+        gameStatus = CONSTS.gameStatus.GAME_STARTED;
+        startGame(this);
+    });
+
+}
+
+function update ()
+{
 }
 
