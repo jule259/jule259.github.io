@@ -14,6 +14,8 @@ export class Player{
         this.status = "waiting"; // waiting, playing, gameover
         this.textObj = null; // プレイヤーのテキストオブジェクト
         this.idObj = null; // プレイヤーのIDオブジェクト
+        this.playOrder = 0; // プレイヤーの出番
+        this.identity = null; // プレイヤーの役職
     }
 
     // プレーヤのカード情報を取得

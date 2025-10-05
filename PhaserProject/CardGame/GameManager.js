@@ -22,6 +22,7 @@ export class GameManager {
             this.hostSocketId = socketId; // ホストプレイヤーのソケットIDを保存
         }
         newplayer.socketId = socketId; // ソケットIDを設定
+        newplayer.identity = CONSTS.playerType.CIVILIAN; // 初期の役職をCIVILIANに設定
         this.players.push(newplayer);
         this.updateGameState();
     }
@@ -30,6 +31,7 @@ export class GameManager {
         let newRobotPlayer = new Player(playerID);
         newRobotPlayer.type = "robot"; // ロボットプレイヤーとして設定
         newRobotPlayer.socketId = ""; // ロボットプレイヤーのソケットIDは空固定
+        newRobotPlayer.identity = CONSTS.playerType.CIVILIAN; // 初期の役職をCIVILIANに設定
         this.players.push(newRobotPlayer);
         this.updateGameState();
     }
@@ -71,6 +73,15 @@ export class GameManager {
         this.gameState = {};
         this.hostPlayerID = "";
         this.hostSocketId = "";
+        this.deck = this.createDeck(); // デッキを初期化
+        this.shuffleDeck(); // デッキをシャッフル
+    }
+
+    resetGame() {
+        this.players.forEach(player => {
+            player.myCards = []; // 各プレイヤーの手札を空にする
+        });
+        this.lastUsedCards = []; // 最後に出したカードを空にする
         this.deck = this.createDeck(); // デッキを初期化
         this.shuffleDeck(); // デッキをシャッフル
     }
@@ -197,12 +208,12 @@ export class GameManager {
         let cardsInfo = {};
         let cardsInfoArr = {};
         cards.forEach((card) => {
-            if (cardsInfoArr[card.pointValue]) {
+            if (cardsInfoArr[card.pointValue]) {// 既に存在するカードの場合
                 cardsInfoArr[card.pointValue] += 1;
-            } else {
+            } else {// 新しいカードの場合
                 cardsInfoArr[card.pointValue] = 1;
             }
-            if (cardsInfoArr[card.pointValue] >= maxSameCardCount) {
+            if (cardsInfoArr[card.pointValue] >= maxSameCardCount) {// 最大の同じカード数を更新
                 maxSameCardCount = cardsInfoArr[card.pointValue];
                 maxSameCardValue = card.pointValue;
             }

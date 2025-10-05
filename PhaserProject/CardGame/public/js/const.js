@@ -111,3 +111,14 @@ export const gameStatus = {
     WAITING_FOR_PLAYERS: "2",
     GAME_STARTED: "3"
 };
+
+export const playerStatus = {
+    WAITING: "waiting",
+    PLAYING: "playing",
+    FINISHED: "finished"
+};
+
+export const playerType = {
+    CIVILIAN: "civilian",
+    LANDLORD: "landlord"
+};

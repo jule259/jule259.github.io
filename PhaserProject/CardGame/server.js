@@ -21,11 +21,6 @@ await client.connect();
 // 静的ファイル公開（Phaser など）
 app.use(express.static("public"));
 
-// サーバ起動
-server.listen(8088, "0.0.0.0", () => {
-  console.log("Server is running on port 8088");
-});
-
 /**********ゲームロジック***********/
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
@@ -65,15 +60,20 @@ io.on("connection", (socket) => {
     if (GM.players.length >= 3) {// プレイヤーが3人以上ならゲーム開始
       console.log("Enough players to start the game");
       // 全プレイヤーの情報を送信
-      socket.emit("allPlayerInfo", JSON.stringify(GM.players));
-      //デッキ情報をクライアントに送信
-      socket.emit("deckInfo", JSON.stringify(GM.deck)); // デッキ情報を全クライアントに送信
-      socket.emit("startGame"); // クライアントにゲーム開始を通知
+      io.emit("allPlayerInfo", JSON.stringify(GM.players));
+      // デッキ情報をクライアントに送信
+      io.emit("deckInfo", JSON.stringify(GM.deck)); // デッキ情報を全クライアントに送信
+      io.emit("startGame"); // クライアントにゲーム開始を通知
     }
   });
 
   // ロボットプレイヤーの追加
   socket.on("addRobotPlayer", () => {
+    //ホストプレイヤーでない場合は無視
+    // if (GM.hostSocketId != socket.id) {
+    //   console.log("Only host player can add robot players.");
+    //   return;
+    // }
     if (GM.players.length < 3) {
       let playerID = GM.players.length + 1; // プレイヤーIDを自動生成
       console.log("Adding robot player:", playerID);
@@ -82,16 +82,16 @@ io.on("connection", (socket) => {
     if (GM.players.length >= 3) {// プレイヤーが3人以上ならゲーム開始
       console.log("Enough players to start the game");
       // 全プレイヤーの情報を送信
-      socket.emit("allPlayerInfo", JSON.stringify(GM.players));
+      io.emit("allPlayerInfo", JSON.stringify(GM.players));
       // デッキ情報をクライアントに送信
-      socket.emit("deckInfo", JSON.stringify(GM.deck)); // デッキ情報を全クライアントに送信
-      socket.emit("startGame"); // クライアントにゲーム開始を通知（個別送信に統一！）
+      io.emit("deckInfo", JSON.stringify(GM.deck)); // デッキ情報を全クライアントに送信
+      io.emit("startGame"); // クライアントにゲーム開始を通知（個別送信に統一！）
     }
   });
 
-  // 全員プレイヤーの情報を取得
+  // 全プレイヤーの情報を取得
   socket.on("getAllPlayerInfo", (socketId) => {
-    console.log("Getting allplayer info by:", socketId);
+    console.log("Getting allPlayer info by:", socketId);
     const allPlayerInfo = GM.players;
     socket.emit("allPlayerInfo", JSON.stringify(allPlayerInfo));
   });
@@ -140,9 +140,89 @@ io.on("connection", (socket) => {
     // ゲーム状態取得のロジックをここに実装
   });
 
-  socket.on("deckShuffled", () => {
-    console.log("Deck has been shuffled, notifying all players.");
-    GM.isShuffled = true; // デッキがシャッフルされたフラグを立てる
+  // プレーヤーカードをプレイする
+  socket.on("cardsPlay", (data) => {
+    console.log("Cards played by player:", data);
+    console.log("playerID:", data.playerID);
+    // カードをプレイするロジックをここに実装
+    const player = GM.players.find(p => p.id === Number(data.playerID));
+    if (player) {
+      // プレイヤーの手札からカードを削除
+      player.myCards = player.myCards.filter(card => !data.cards.includes(card));
+      console.log(`Updated hand for player ${data.playerID}:`, player.myCards);
+    }
+    //出したカードの情報を更新し、全クライアントに送信
+    data.cards.forEach(card => {
+      GM.lastUsedCards.push(card);
+    });
+    let playData = {playerID: data.playerID, cards: GM.lastUsedCards};
+    io.emit("updateLastUsedCards", JSON.stringify(playData));
+  });
+
+  // ゲームリセット
+  socket.on("resetGame", () => {
+    console.log("Resetting game as requested by:", socket.id);
+    //ホストプレイヤーでない場合は無視
+    // if (GM.hostSocketId != socket.id) {
+    //   console.log("Only host player can reset the game.");
+    //   return;
+    // }
+    GM.resetGame(); // ゲームリセット
+    io.emit("gameReset"); // 全クライアントにゲームリセットを通知
+    // 全プレイヤーの情報を送信
+    io.emit("allPlayerInfo", JSON.stringify(GM.players));
+    // デッキ情報をクライアントに送信
+    io.emit("deckInfo", JSON.stringify(GM.deck)); // デッキ情報を全クライアントに送信
+    io.emit("startGame"); // クライアントにゲーム開始を通知
+
+  });
+});
+/**********ゲームロジック終了***********/
+
+
+/************サーバ監視用**************/
+// デバッグ用エンドポイント（変数の値を返すやつ）
+app.get('/debug', (req, res) => {
+  // ここで見たい変数を返す！例：プレイヤー情報とデッキ
+  res.json({
+    players: GM.players, // プレイヤー一覧
+    deck: GM.deck,       // デッキの状態
+    lastUsedCards: GM.lastUsedCards // 場に出てるカード
   });
 });
 
+// JSONボディを受け取るための設定
+app.use(express.json());
+
+// サーバ変数を更新するエンドポイント
+app.post('/update', (req, res) => {
+  // 受け取ったデータでサーバ変数を更新するよ
+  const { players, deck, lastUsedCards } = req.body;
+
+  // プレイヤー情報を更新
+  if (players) {
+    GM.players = players;
+  }
+  // デッキ情報を更新
+  if (deck) {
+    GM.deck = deck;
+  }
+  // 場に出てるカード情報を更新
+  if (lastUsedCards) {
+    GM.lastUsedCards = lastUsedCards;
+  }
+
+  // 更新した内容を返す
+  res.json({
+    message: "サーバ変数を更新したよ！",
+    players: GM.players,
+    deck: GM.deck,
+    lastUsedCards: GM.lastUsedCards
+  });
+});
+
+/************サーバ監視用終了**************/
+// サーバ起動
+server.listen(8088, "0.0.0.0", () => {
+  console.log("Server is running on port 8088");
+});

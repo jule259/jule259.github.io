@@ -1,11 +1,11 @@
 import * as CONSTS from './const.js';
 import { Player } from './player.js';
-import { getSocket, getMyPlayerID, setPlayers, getPlayerMe, setPlayerMe} from './ClientCommon.js';
+import * as CMFUNC from './ClientCommon.js';
 
 let lastUsedCard = null; // 最後に出したカード
 let lastUsedCards =[]; // 最後に出したカードを格納する配列
 let okBtn = null; // OKボタン
-export let deckData = []; // デッキのカードを格納する配列
+let deckData = []; // デッキのカードを格納する配列
 // let usedCards = []; // 出したカードの配列
 let myCardsObj = []; // 手札を格納する配列
 let selectedCards = []; // 選択したカードの配列
@@ -21,58 +21,16 @@ let myCardField = {
 
 export function startGame(scene){
     // 共通socketを取得
-    const socket = getSocket();
+    const socket = CMFUNC.getSocket();
 
     //デッキを作成
     // createDeck(scene);
-    let playerMe = null;
-    let playerLeft = null;
-    let playerRight = null;
-    let players = [];
+
     //サーバからプレイヤー情報を取得
     socket.emit("getAllPlayerInfo", socket.id);
     //プレイヤー情報を受信
 
     //socket.off("allPlayerInfo"); // Remove existing listener
-    let playersData = [];
-    socket.on("allPlayerInfo", (data) => {
-        playersData = JSON.parse(data);
-        console.log("PlayersData:", playersData);
-        //プレイヤー情報を設定
-        playersData.forEach((player) => {
-            if (player.id === getMyPlayerID()) {//自分のプレーヤー
-                playerMe = new Player(player.id);
-                playerMe.type = player.type;
-                playerMe.status = player.status;
-                setPlayerMe(playerMe); // 自分のプレイヤー情報を保存
-                players.push(playerMe);
-            } else {
-                if (!playerLeft) {//左側のプレーヤー
-                    playerLeft = new Player(player.id);
-                    playerLeft.type = player.type;
-                    playerLeft.status = player.status;
-                    playerLeft.position_x = CONSTS.leftPlayerField.x + CONSTS.leftPlayerField.width / 2;
-                    playerLeft.position_y = CONSTS.leftPlayerField.y + CONSTS.leftPlayerField.height / 2;
-                    players.push(playerLeft);
-                } else if (!playerRight) {//右側のプレーヤー
-                    playerRight = new Player(player.id);
-                    playerRight.type = player.type;
-                    playerRight.status = player.status;
-                    playerRight.position_x = CONSTS.rightPlayerField.x + CONSTS.rightPlayerField.width / 2;
-                    playerRight.position_y = CONSTS.rightPlayerField.y + CONSTS.rightPlayerField.height / 2;
-                    players.push(playerRight);
-                } else {
-                    //それ以外のプレーヤーは無視
-                }
-            }
-        });
-        setPlayers(players); // プレイヤー情報を保存
-        console.log("全プレーヤー情報：", players);
-
-        //プレーヤ初期化完了後、サーバへ通信
-        socket.emit("PlayersInitialized", playerMe.id);
-    });
-
 
 
     // //デッキをシャッフルし、カードを引く
@@ -110,7 +68,7 @@ export function startGame(scene){
 //cardArr：引くカードの配列（初期値は空オブジェクト）
 //戻り値：なし
 export function drawCard(scene , drawNum , player, nowNum = 0 , cardArr = {}, cb = null) {
-    if (player.id != getMyPlayerID()){//自分以外のプレーヤー
+    if (player.id != CMFUNC.getMyPlayerID()){//自分以外のプレーヤー
         if (nowNum >= drawNum) {//ドロー終了
             //手札をソート
             sortCard(player.myCardsObj, "pointValue", "asc");
@@ -156,7 +114,7 @@ export function drawCard(scene , drawNum , player, nowNum = 0 , cardArr = {}, cb
             },
         });
     } else {//自分のプレーヤー
-        let playerMe = getPlayerMe();
+        let playerMe = CMFUNC.getPlayerMe();
         if (nowNum >= drawNum) {//ドロー終了
             //手札をソート
             sortCard(myCardsObj, "pointValue", "asc");
@@ -318,6 +276,11 @@ function sortCard(cards, sortkey, sortType = "asc") {
 
 //カードを出す
 function playCard(scene){
+    //自分の状態がWAITINGの場合は何もしない
+    if (CMFUNC.getPlayerMe().status === CONSTS.playerStatus.WAITING) {
+        return;
+    }
+    //選択されたカードがない場合は何もしない
     if (selectedCards.length === 0) {
         return;
     }
@@ -339,7 +302,6 @@ function playCard(scene){
         CONSTS.usedCardField.y + 120, //上余白
         CONSTS.usedCardField.y + CONSTS.usedCardField.height - 120 //下余白
     );
-
 
     lastUsedCards = [];
     //選択されたカードを出す
@@ -368,7 +330,9 @@ function playCard(scene){
                 //最後に出したカードを最新カードフィルドに設定
                 lastUsedCard = scene.add.image(CONSTS.lastUsedCardField.x + CONSTS.lastUsedCardField.width / 2, CONSTS.lastUsedCardField.y + CONSTS.lastUsedCardField.height / 2, card.key).setScale(0.2);
                 lastUsedCard.showNo = card.showNo;//表示番号
+                lastUsedCard.key = card.key; // カードのキー
                 lastUsedCard.pointValue = card.pointValue;//カードの値
+                lastUsedCard.type = card.type;//カードのタイプ
                 //最後に出したカードの配列に追加(複製して格納)
                 lastUsedCards.push(lastUsedCard);
                 if (i === selectedCards.length - 1) {
@@ -413,6 +377,8 @@ function playCard(scene){
                     console.log("出したカードのタイプ：" + getCardType(lastUsedCards));
                     console.log(lastUsedCards);
 
+                    //出したカードの情報をサーバに送信
+                    sendLastUsedCardsToServer(lastUsedCards);
                 }
             },
         });
@@ -581,6 +547,7 @@ function countCardsInfo(cards){
 
 //デッキを作成
 export function createDeck(scene, deck){
+    deck = JSON.parse(deck);
     //デッキのカードを初期化
     deckData = [];
     //デッキのカードを作成
@@ -755,7 +722,7 @@ export function createField(scene){
 
 //OKボタン作成
 function createButton(scene){
-    let playerMe = getPlayerMe();
+    let playerMe = CMFUNC.getPlayerMe();
     //手札が0枚,または自分が待ち状態の場合、ボタンを消す
     if (myCardsObj.length === 0 || playerMe.status === "waiting") {
         //ボタンを削除
@@ -893,10 +860,26 @@ function showOtherPlayerInfo(scene, player){
     }).setOrigin(0.5);
 }
 
-// ゲーム開始をまつとき、画面に「waiting for players」と表示
-export function waitingForPlayers(scene) {
+// ゲーム開始をまつ
+export function waitingForStartGame(scene) {
+    // 「waiting for players」を表示
+    showWaitingForPlayers(scene);
+
+    const socket = CMFUNC.getSocket();
+
+    console.log ("Socket initialized:", socket.id);
+    // Promiseでゲーム開始を待つ
+    return new Promise((resolve) => {
+        socket.on("startGame", () => {
+            removeWaitingForPlayers(); // 「waiting for players」を削除
+            resolve(); // ゲーム開始！
+        });
+    });
+}
+
+//画面に「waiting for players」を表示
+export function showWaitingForPlayers(scene) {
     console.log("Waiting for players...");
-    
     // 画面中央にテキストを表示
     const waitingText = scene.add.text(
         scene.cameras.main.width / 2,
@@ -907,15 +890,218 @@ export function waitingForPlayers(scene) {
             fill: '#fff'
         }
     ).setOrigin(0.5);
+    CMFUNC.setWaitingText(waitingText); // テキストを保存
+}
 
-    const socket = getSocket();
+//画面にある「waiting for players」を削除
+export function removeWaitingForPlayers() {
+    const waitingText = CMFUNC.getWaitingText();
+    if (waitingText) {
+        waitingText.destroy(); // テキストを削除
+    }
+}
 
-    console.log ("Socket initialized:", socket.id);
-    // Promiseでゲーム開始を待つ
-    return new Promise((resolve) => {
-        socket.on("startGame", () => {
-            waitingText.destroy(); // テキストを削除
-            resolve(); // ゲーム開始！
-        });
+//出したカードの情報をサーバに送信
+function sendLastUsedCardsToServer(lastUsedCards) {
+    const socket = CMFUNC.getSocket();
+    let playData = {playerID: CMFUNC.getMyPlayerID()};
+    let cards = [];
+    lastUsedCards.forEach((card) => {
+        cards.push({key: card.key, pointValue: card.pointValue, type: card.type});
     });
+    playData.cards = cards;
+    console.log("Sending played cards to server:", playData);
+    // サーバに出したカードの情報を送信
+    socket.emit("cardsPlay", playData);
+}
+
+//ユーザ情報を初期化
+export function initPlayerInfo(scene, data) {
+    const socket = CMFUNC.getSocket();
+    let playerMe = null;
+    let playerLeft = null;
+    let playerRight = null;
+    let players = [];
+    let playersData = JSON.parse(data);
+    console.log("PlayersData:", playersData);
+    //プレイヤー情報を設定
+    playersData.forEach((player) => {
+        if (player.id === CMFUNC.getMyPlayerID()) {//自分のプレーヤー
+            playerMe = new Player(player.id);
+            playerMe.type = player.type;
+            playerMe.status = player.status;
+            playerMe.identity = player.identity; // アイデンティティを設定
+            playerMe.position_x = scene.cameras.main.width / 2;
+            playerMe.position_y = myCardField.y;
+            CMFUNC.setPlayerMe(playerMe); // 自分のプレイヤー情報を保存
+            players.push(playerMe);
+            //プレーヤーidを表示
+            playerMe.idObj = scene.add.text(playerMe.position_x, playerMe.position_y + 100, playerMe.id, {
+                fontSize: '20px',
+                fill: '#fff'
+            }).setOrigin(0.5);
+        } else {
+            if (!playerLeft) {//左側のプレーヤー
+                playerLeft = new Player(player.id);
+                playerLeft.type = player.type;
+                playerLeft.status = player.status;
+                playerLeft.identity = player.identity; // アイデンティティを設定
+                playerLeft.position_x = CONSTS.leftPlayerField.x + CONSTS.leftPlayerField.width / 2;
+                playerLeft.position_y = CONSTS.leftPlayerField.y + CONSTS.leftPlayerField.height / 2;
+                players.push(playerLeft);
+            } else if (!playerRight) {//右側のプレーヤー
+                playerRight = new Player(player.id);
+                playerRight.type = player.type;
+                playerRight.status = player.status;
+                playerRight.identity = player.identity; // アイデンティティを設定
+                playerRight.position_x = CONSTS.rightPlayerField.x + CONSTS.rightPlayerField.width / 2;
+                playerRight.position_y = CONSTS.rightPlayerField.y + CONSTS.rightPlayerField.height / 2;
+                players.push(playerRight);
+            } else {
+                //それ以外のプレーヤーは無視
+            }
+        }
+    });
+    CMFUNC.setPlayers(players); // プレイヤー情報を保存
+    console.log("全プレーヤー情報：", players);
+
+    //プレーヤ初期化完了後、サーバへ通信
+    socket.emit("PlayersInitialized", playerMe.id);
+}
+
+//ユーザ情報を更新
+export function updatePlayerInfo(data){
+    let playersData = JSON.parse(data);
+    playersData.forEach(playerData => {
+        let player = CMFUNC.getPlayerById(playerData.id);
+        if (player) {
+            player.status = playerData.status; // プレーヤーのステータスを更新
+            player.identity = playerData.identity; // プレーヤーのアイデンティティを更新
+            player.myCards = playerData.myCards; // 手札を更新
+        }
+    });
+}
+
+//出したカードの情報を更新
+export function updateLastUsedCards(scene, data) {
+    let playData = JSON.parse(data);
+    const playerID = playData.playerID;
+    if(playerID === CMFUNC.getMyPlayerID()){//カードを出したプレーヤが自分の場合、何もしない
+        return;
+    }
+    const player = CMFUNC.getPlayerById(playerID);
+    if (!player) {//プレーヤーが見つからない場合
+        return;
+    }
+    //プレーヤのカードを場に出す
+
+    // フィールド内のランダムな位置に移動
+    let targetX = Phaser.Math.Between(
+        CONSTS.usedCardField.x + CONSTS.cardInfo.width, //左余白
+        CONSTS.usedCardField.x + CONSTS.usedCardField.width - selectedCards.length * CONSTS.cardInfo.width //右余白
+    );
+    let targetY = Phaser.Math.Between(
+        CONSTS.usedCardField.y + 120, //上余白
+        CONSTS.usedCardField.y + CONSTS.usedCardField.height - 120 //下余白
+    );
+    //場に出すカードを生成
+    let playedCards = [];
+    playData.cards.forEach((cardData) => {
+        //プレーヤの手札からカードを取得
+        let card = player.myCardsObj.find((c) => c.key === cardData.key);
+        if (card) {
+            playedCards.push(card);
+        }
+    });
+    lastUsedCards = [];
+    for (let i = 0; i < playedCards.length; i++) {
+        let card = playedCards[i];
+        //カードの画像を最前面に移動
+        scene.children.bringToTop(card);
+        //カードの正面を表示
+        card.setTexture(card.key);
+
+        console.log("Player " + playerID + " played card:", card);
+
+        //プレーヤの手札から削除
+        player.myCardsObj = player.myCardsObj.filter((c) => c.key !== card.key);
+
+        //アニメーションを追加
+        scene.tweens.add({
+            targets: card,
+            x: targetX + i * CONSTS.cardInfo.width, //目標のX座標
+            y: targetY, //目標のY座標
+            ease: 'Power2', //イージング
+            duration: 500, //移動にかける時間（ミリ秒）
+            onComplete: () => {
+                //最後に出したカードを最新カードフィルドに設定
+                let lastUsedCard = scene.add.image(CONSTS.lastUsedCardField.x + CONSTS.lastUsedCardField.width / 2, CONSTS.lastUsedCardField.y + CONSTS.lastUsedCardField.height / 2, card.key).setScale(0.2);
+                lastUsedCard.showNo = card.showNo;//表示番号
+                lastUsedCard.key = card.key; // カードのキー
+                lastUsedCard.pointValue = card.pointValue;//カードの値
+                lastUsedCard.type = card.type;//カードのタイプ
+                //最後に出したカードの配列に追加(複製して格納)
+                lastUsedCards.push(lastUsedCard);
+                 if (i === playedCards.length - 1) {//最後のカードの場合
+                    //表示操作用カードを追加
+                    lastUsedCard = scene.add.image(CONSTS.lastUsedCardField.x + CONSTS.lastUsedCardField.width / 2, CONSTS.lastUsedCardField.y + CONSTS.lastUsedCardField.height / 2, card.key).setScale(0.2);
+                    //最後に出したカードのイベントを設定
+                    lastUsedCard.setInteractive();
+                    lastUsedCard.on('pointerover', () => {//マウスがカードに触れたときのイベント
+                        //最後の一回で出した全てのカードをポップアップで表示
+                        lastUsedCards.forEach((lcard) => {
+                            lcard.originalX = lcard.x;
+                            lcard.originalY = lcard.y;
+                            let cardWidth = lastUsedCards.length * CONSTS.cardInfo.width;
+                            //カードの横位置を調整（アニメーション）
+                            scene.tweens.add({
+                                targets: lcard,
+                                x: (scene.cameras.main.width / 2 - cardWidth / 2) + CONSTS.cardInfo.width / 2 + CONSTS.cardInfo.width * (lcard.showNo - 1),
+                                y: CONSTS.lastUsedCardField.y + CONSTS.lastUsedCardField.height / 2,
+                                ease: 'Power2',
+                                duration: 100,
+                            });
+                        });
+                    });
+                    lastUsedCard.on('pointerout', () => {//マウスがカードから離れたときのイベント
+                        //カードを元の位置に戻す(アニメーション）
+                        lastUsedCards.forEach((lcard) => {
+                            scene.tweens.add({
+                                targets: lcard,
+                                x: lcard.originalX,
+                                y: lcard.originalY,
+                                ease: 'Power2',
+                                duration: 100,
+                            });
+                        });
+                    });
+                }
+            },
+        });
+    }
+
+    //プレーヤの手札から出したカードを削除
+    player.myCards = player.myCards.filter((card) => !playData.cards.some((playedCard) => playedCard.key === card.key));
+
+}
+
+//ゲームリセット
+export function resetGame(scene) {
+    //オブジェクトを初期化
+    deckData = [];
+    myCardsObj = [];
+    selectedCards = [];
+    lastUsedCard = null;
+    lastUsedCards = [];
+    okBtn = null;
+    gameOver = false;
+    //プレーヤ情報を初期化
+    CMFUNC.setPlayers([]);
+    CMFUNC.setPlayerMe(null);
+    //画面をクリア
+    scene.children.removeAll();
+    //フィールドを作成
+    createField(scene);
+    // 「waiting for players」を表示
+    showWaitingForPlayers(scene);
 }

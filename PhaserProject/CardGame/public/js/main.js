@@ -1,6 +1,6 @@
 import * as CONSTS from './const.js';
-import { startGame, createField, waitingForPlayers, createDeck, shuffleDeck, drawCard , deckData} from './game.js';
-import { getSocket, getMyPlayerID, setMyPlayerID, getPlayers } from './ClientCommon.js';
+import * as GMFUNC from './game.js';
+import * as CMFUNC from './ClientCommon.js';
 
 const config = {
     type: Phaser.AUTO,
@@ -19,7 +19,6 @@ const config = {
     }
 };
 
-let isWaiting = false; // すでに待機処理を呼んだかどうかのフラグ
 var gameStatus = CONSTS.gameStatus.WAITING_FOR_START; // ゲームの初期状態を設定
 
 
@@ -43,11 +42,17 @@ function preload ()
 
 function create ()
 {
+    // ゲームフィールドの作成
+    GMFUNC.createField(this);
+
+    // 「waiting for players」を表示
+    GMFUNC.showWaitingForPlayers(this);
+
     // 共通socketを取得
-    const socket = getSocket();
+    const socket = CMFUNC.getSocket();
     socket.on('connect', () => {
         console.log('Connected to server with ID:', socket.id);
-        let playerCount = getPlayers().length;
+        let playerCount = CMFUNC.getPlayers().length;
         if (playerCount === 0) {// プレーヤーがいない場合、プレイヤーを追加する
             // プレイヤーを追加するイベントをサーバに送信
             socket.emit("addPlayer");
@@ -57,8 +62,8 @@ function create ()
         }
     });
     socket.on('playerAdded', (playerID) => {
-        setMyPlayerID(playerID); // プレイヤーIDを保存
-        console.log("Player added with ID:", getMyPlayerID());
+        CMFUNC.setMyPlayerID(playerID); // プレイヤーIDを保存
+        console.log("Player added with ID:", CMFUNC.getMyPlayerID());
     });
 
     //メニュー画面
@@ -92,7 +97,7 @@ function create ()
     //         ease: Phaser.Math.Easing.Bounce.InOut,
     //         y: -1000,
     //         onComplete: () => {
-    //             startGame(this);
+    //             GMFUNC.startGame(this);
     //         }
     //     })
     // });
@@ -101,10 +106,9 @@ function create ()
     socket.on('deckInfo', (deck) => {
         // サーバのデッキ情報を基にデッキを作成する
         console.log("Deck received from server:", deck);
-        createDeck(this, JSON.parse(deck));
+        GMFUNC.createDeck(this, deck);
         //console.log("Deck created with cards:", deckData);
-        shuffleDeck(this); // デッキをシャッフル
-        socket.emit("deckShuffled"); // シャッフル後のデッキをサーバに送信
+        GMFUNC.shuffleDeck(this); // デッキをシャッフル(アニメーションのみ)
     });
 
     socket.on('cardsDrawn', (data) => {
@@ -112,21 +116,39 @@ function create ()
         console.log("Cards drawn from server:", data);
         let playerID = data.playerId;
         let drawnCards = data.drawnCards;
-        let players = getPlayers();
+        let players = CMFUNC.getPlayers();
         let player = players.find(p => p.id === playerID);
         if (player) {
             // プレイヤーの手札に引いたカードを追加
-            drawCard(this, drawnCards.length, player, 0, drawnCards);
+            GMFUNC.drawCard(this, drawnCards.length, player, 0, drawnCards);
         } else {
             console.error(`Player with ID ${playerID} not found.`);
         }
     });
 
-    createField(this);
+    socket.on("allPlayerInfo", (data) => {
+        if(CMFUNC.getPlayers().length === 0) {//プレイヤー情報設定されていない場合
+            GMFUNC.initPlayerInfo(this, data);
+        } else {//プレイヤー情報が設定されている場合
+            GMFUNC.updatePlayerInfo(data);
+        }
+    });
+
+    socket.on("updateLastUsedCards", (data) => {
+        // 出したカードの情報を更新
+        console.log("Last used cards updated:", data);
+        GMFUNC.updateLastUsedCards(this, data);
+    });
+
+    socket.on("gameReset", () => {
+        console.log("Game reset received from server");
+        GMFUNC.resetGame(this);
+        // gameStatus = CONSTS.gameStatus.WAITING_FOR_START;
+    });
 
     //キーボードの「R」キー押下時ロボットプレイヤーを追加
     this.input.keyboard.addKey("R").on("down", () => {
-        const playerCount = getPlayers().length;
+        const playerCount = CMFUNC.getPlayers().length;
         console.log("Adding robot player, current player count:", playerCount);
         if (playerCount < 3) { // 最大3人までロボットプレイヤーを追加
             socket.emit("addRobotPlayer"); // ロボットプレイヤーを追加
@@ -136,13 +158,24 @@ function create ()
         }
     });
 
+    //キーボードの「O」キー押下時ゲームをリセット
+    this.input.keyboard.addKey("O").on("down", () => {
+        console.log("Resetting game");
+        socket.emit("resetGame"); // ゲームをリセット
+    });
+
+    socket.on("startGame", () => {
+        GMFUNC.removeWaitingForPlayers(); // 「waiting for players」を削除
+        //gameStatus = CONSTS.gameStatus.GAME_STARTED;
+        GMFUNC.startGame(this);
+    });
 
     // 非同期でゲーム開始を待つ
-    waitingForPlayers(this).then(() => {
-        // サーバーからstartGameイベントが送られたときの処理
-        gameStatus = CONSTS.gameStatus.GAME_STARTED;
-        startGame(this);
-    });
+    // GMFUNC.waitingForStartGame(this).then(() => {
+    //     // サーバーからstartGameイベントが送られたときの処理
+    //     gameStatus = CONSTS.gameStatus.GAME_STARTED;
+    //     GMFUNC.startGame(this);
+    // });
 
 }
 
