@@ -59,6 +59,10 @@ io.on("connection", (socket) => {
     }
     if (GM.players.length >= 3) {// プレイヤーが3人以上ならゲーム開始
       console.log("Enough players to start the game");
+      // プレイヤーの役職をランダムで設定
+      GM.randomIdentities();
+      // プレイヤーの出番を決定
+      GM.determinePlayOrder();
       // 全プレイヤーの情報を送信
       io.emit("allPlayerInfo", JSON.stringify(GM.players));
       // デッキ情報をクライアントに送信
@@ -81,6 +85,10 @@ io.on("connection", (socket) => {
     }
     if (GM.players.length >= 3) {// プレイヤーが3人以上ならゲーム開始
       console.log("Enough players to start the game");
+      // プレイヤーの役職をランダムで設定
+      GM.randomIdentities();
+      // プレイヤーの出番を決定
+      GM.determinePlayOrder();
       // 全プレイヤーの情報を送信
       io.emit("allPlayerInfo", JSON.stringify(GM.players));
       // デッキ情報をクライアントに送信
@@ -107,7 +115,11 @@ io.on("connection", (socket) => {
         //全員に17枚のカードをドローさせる
         // 全プレイヤーに個別でカード配布イベントを送るぜ！
         GM.players.forEach(p => {
-          GM.playerDrawCard(io, p.id, 17);
+          if (p.identity === "landlord") {// 役職がlandlordなら20枚ドロー
+            GM.playerDrawCard(io, p.id, 20);
+          } else {// 役職がcivilianなら17枚ドロー
+            GM.playerDrawCard(io, p.id, 17);
+          }
         });
         console.log(`Host player ${playerId} initialized, starting game.`);
       }
@@ -142,7 +154,7 @@ io.on("connection", (socket) => {
 
   // プレーヤーカードをプレイする
   socket.on("cardsPlay", (data) => {
-    console.log("Cards played by player:", data);
+    //console.log("Cards played by player:", data);
     console.log("playerID:", data.playerID);
     // カードをプレイするロジックをここに実装
     const player = GM.players.find(p => p.id === Number(data.playerID));
@@ -157,6 +169,9 @@ io.on("connection", (socket) => {
     });
     let playData = {playerID: data.playerID, cards: GM.lastUsedCards};
     io.emit("updateLastUsedCards", JSON.stringify(playData));
+    //次のプレイヤーに交代
+    GM.advanceToNextPlayer(io);
+
   });
 
   // ゲームリセット

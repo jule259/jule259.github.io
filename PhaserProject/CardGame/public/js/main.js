@@ -36,17 +36,22 @@ function preload ()
     this.load.image("card_back_green", "assets/card_back_green.png");
 
     //ボタン
-    this.load.image("button_ok", "assets/button_ok.png");
+    //this.load.image("button_ok", "assets/button_ok.png");
+    this.load.image("tick_blue", "assets/tick_blue.png");
+    this.load.image("cancel_grey", "assets/cancel_grey.png");
 
 }
 
 function create ()
 {
+    // シーンオブジェクトを保存
+    CMFUNC.setScene(this);
+
     // ゲームフィールドの作成
-    GMFUNC.createField(this);
+    GMFUNC.createField();
 
     // 「waiting for players」を表示
-    GMFUNC.showWaitingForPlayers(this);
+    GMFUNC.showWaitingForPlayers();
 
     // 共通socketを取得
     const socket = CMFUNC.getSocket();
@@ -106,9 +111,9 @@ function create ()
     socket.on('deckInfo', (deck) => {
         // サーバのデッキ情報を基にデッキを作成する
         console.log("Deck received from server:", deck);
-        GMFUNC.createDeck(this, deck);
+        GMFUNC.createDeck(deck);
         //console.log("Deck created with cards:", deckData);
-        GMFUNC.shuffleDeck(this); // デッキをシャッフル(アニメーションのみ)
+        GMFUNC.shuffleDeck(); // デッキをシャッフル(アニメーションのみ)
     });
 
     socket.on('cardsDrawn', (data) => {
@@ -120,7 +125,7 @@ function create ()
         let player = players.find(p => p.id === playerID);
         if (player) {
             // プレイヤーの手札に引いたカードを追加
-            GMFUNC.drawCard(this, drawnCards.length, player, 0, drawnCards);
+            GMFUNC.drawCard(drawnCards.length, player, 0, drawnCards);
         } else {
             console.error(`Player with ID ${playerID} not found.`);
         }
@@ -128,7 +133,7 @@ function create ()
 
     socket.on("allPlayerInfo", (data) => {
         if(CMFUNC.getPlayers().length === 0) {//プレイヤー情報設定されていない場合
-            GMFUNC.initPlayerInfo(this, data);
+            GMFUNC.initPlayerInfo(data);
         } else {//プレイヤー情報が設定されている場合
             GMFUNC.updatePlayerInfo(data);
         }
@@ -137,14 +142,19 @@ function create ()
     socket.on("updateLastUsedCards", (data) => {
         // 出したカードの情報を更新
         console.log("Last used cards updated:", data);
-        GMFUNC.updateLastUsedCards(this, data);
+        GMFUNC.updateLastUsedCards(data);
     });
 
     socket.on("gameReset", () => {
         console.log("Game reset received from server");
-        GMFUNC.resetGame(this);
+        GMFUNC.resetGame();
         // gameStatus = CONSTS.gameStatus.WAITING_FOR_START;
     });
+
+    // socket.on("updatePlayersStatus", (data) => {
+    //     console.log("Player status updated:", data);
+    //     GMFUNC.updatePlayersStatus(data);
+    // });
 
     //キーボードの「R」キー押下時ロボットプレイヤーを追加
     this.input.keyboard.addKey("R").on("down", () => {
@@ -167,7 +177,7 @@ function create ()
     socket.on("startGame", () => {
         GMFUNC.removeWaitingForPlayers(); // 「waiting for players」を削除
         //gameStatus = CONSTS.gameStatus.GAME_STARTED;
-        GMFUNC.startGame(this);
+        GMFUNC.startGame();
     });
 
     // 非同期でゲーム開始を待つ

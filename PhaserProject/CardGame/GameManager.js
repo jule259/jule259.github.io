@@ -10,7 +10,8 @@ export class GameManager {
         this.hostSocketId = ""; // ホストプレイヤーのソケットID
         this.isShuffled = false; // デッキがシャッフルされたかどうか
         this.lastUsedCards =[]; // 最後に出したカードを格納する配列
-
+        this.playOrder = []; // プレイヤーの出番順
+        this.playingPlayerIndex = 0; // 現在のプレイヤーのインデックス
     }
 
     addPlayer(playerID, socketId) {
@@ -84,6 +85,8 @@ export class GameManager {
         this.lastUsedCards = []; // 最後に出したカードを空にする
         this.deck = this.createDeck(); // デッキを初期化
         this.shuffleDeck(); // デッキをシャッフル
+        this.randomIdentities();// プレイヤーの役職をランダムで設定
+        this.determinePlayOrder(); // プレイヤーの出番を決定
     }
 
     startGame() {
@@ -119,6 +122,63 @@ export class GameManager {
         }
     }
 
+    //プレーヤの役職をランダムに決定する
+    randomIdentities() {
+        //全員の中、一人がlandlord、残りがcivilian
+        if (this.players.length === 0) {
+            console.error("No players to assign identities.");
+            return;
+        }
+        //（仮）ホストプレイヤーを地主に設定
+        const hostPlayer = this.players.find(p => p.id === this.hostPlayerID);
+        if (hostPlayer) {
+            hostPlayer.identity = CONSTS.playerType.LANDLORD;
+        }
+        const landlordIndex = this.players.indexOf(hostPlayer);
+
+        // const landlordIndex = Math.floor(Math.random() * this.players.length);
+        this.players[landlordIndex].identity = CONSTS.playerType.LANDLORD;
+        this.players.forEach((player, index) => {
+            if (index !== landlordIndex) {
+                player.identity = CONSTS.playerType.CIVILIAN;
+            }
+        });
+    }
+
+    //プレイヤーの出番を決定する
+    determinePlayOrder() {
+        for (let i = 0; i < this.players.length; i++) {
+            this.playOrder.push(this.players[i].id);
+            if (this.players[i].identity === CONSTS.playerType.LANDLORD) {
+                this.playingPlayerIndex = i; // 最初の出番を地主に設定
+                this.players[i].status = "playing"; // 地主のステータスをplayingに設定
+            } else {
+                this.players[i].status = "waiting"; // 他のプレイヤーのステータスをwaitingに設定
+            }
+        }
+    }
+
+    //次のプレイヤーに交代する
+    advanceToNextPlayer(io) {
+        if (this.playOrder.length === 0) {
+            console.error("Play order is not set.");
+            return;
+        }
+        this.playingPlayerIndex = (this.playingPlayerIndex + 1) % this.playOrder.length;
+        // 全プレイヤーのステータスを更新
+        this.players.forEach(player => {
+            if (player.id === this.playOrder[this.playingPlayerIndex]) {
+                player.status = "playing";
+            } else {
+                player.status = "waiting";
+            }
+        });
+        // 全プレイヤーの情報を送信
+        io.emit("allPlayerInfo", JSON.stringify(this.players));
+    }
+
+    /******未使用 *****/
+    
     //出せるカードを取得する
     //戻り値：出せるカードの配列 => []
     getPlayableCards(cards) {

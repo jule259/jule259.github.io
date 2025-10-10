@@ -3,6 +3,7 @@ let myPlayerID = null; // プレイヤーID
 let players = []; // プレイヤー情報を格納する配列
 let playerMe = null; // 自分のプレイヤー情報
 let waitingText = null; // 待機中のテキスト
+let scene = null; // Phaserのシーンオブジェクト
 
 export function getSocket() {
     if (!socket) {
@@ -36,4 +37,10 @@ export function getWaitingText() {
 }
 export function setWaitingText(text) {
     waitingText = text;
+}
+export function getScene() {
+    return scene;
+}
+export function setScene(phaserScene) {
+    scene = phaserScene;
 }
