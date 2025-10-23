@@ -3,6 +3,7 @@ import http from "http";
 import { Server } from "socket.io";
 import { createClient } from "redis";
 import { GameManager } from "./GameManager.js"; // ゲームロジックを管理するクラス
+import * as CONSTS from './public/js/const.js';
 
 const GM = new GameManager(); // ゲームマネージャのインスタンスを作成
 const app = express();
@@ -22,9 +23,9 @@ await client.connect();
 app.use(express.static("public"));
 
 /**********ゲームロジック***********/
+GM.initGame(); // ゲームの初期化
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
-  GM.initGame(); // ゲームの初期化
   socket.on('disconnect', function () { // ソケットが切断されたときの処理
     console.log('A user disconnected: ' + socket.id);
     let socketIdDelete = socket.id;
@@ -33,11 +34,10 @@ io.on("connection", (socket) => {
     console.log("Checking if host player is disconnected:", GM.hostSocketId);
     if (GM.hostSocketId === socketIdDelete) {
       console.log("Host player disconnected, removing all players.");
-      GM.players.forEach(player => {
-        GM.removePlayer(player.id); // 全てのプレイヤーを削除
-      });
+      GM.removeAllPlayers();
       GM.initGame(); // ゲームの初期化
     } else {
+      GM.removePlayerBySocketId(socketIdDelete);
       console.log("Removing player by socket ID:", socketIdDelete);
     }
   });
@@ -51,7 +51,7 @@ io.on("connection", (socket) => {
 
   // プレイヤーの追加
   socket.on("addPlayer", () => {
-    if (GM.players.length <3) { // 最大3人までプレイヤーを追加
+    if (GM.players.length < 3) { // 最大3人までプレイヤーを追加
       let playerID = GM.players.length + 1; // プレイヤーIDを自動生成
       GM.addPlayer(playerID, socket.id); // プレイヤーIDを自動生成
       console.log("Adding player:", playerID);
@@ -107,7 +107,7 @@ io.on("connection", (socket) => {
   // プレイヤー初期化完了
   socket.on("PlayersInitialized", (playerId) => {
     console.log("Player initialized:", playerId);
-    const player = GM.players.find(p => p.id === Number(playerId));
+    const player = GM.getPlayerById(playerId);
     console.log("playercount:", GM.players.length);
     if (player) {
       console.log(`Player ${playerId} initialized with socket ID: ${socket.id}`);
@@ -115,7 +115,7 @@ io.on("connection", (socket) => {
         //全員に17枚のカードをドローさせる
         // 全プレイヤーに個別でカード配布イベントを送るぜ！
         GM.players.forEach(p => {
-          if (p.identity === "landlord") {// 役職がlandlordなら20枚ドロー
+          if (p.identity === CONSTS.PLAYER_TYPE.LANDLORD) {// 役職がlandlordなら20枚ドロー
             GM.playerDrawCard(io, p.id, 20);
           } else {// 役職がcivilianなら17枚ドロー
             GM.playerDrawCard(io, p.id, 17);
@@ -156,12 +156,12 @@ io.on("connection", (socket) => {
   socket.on("cardsPlay", (data) => {
     //console.log("Cards played by player:", data);
     console.log("playerID:", data.playerID);
-    // カードをプレイするロジックをここに実装
-    const player = GM.players.find(p => p.id === Number(data.playerID));
-    if (player) {
+    const player = GM.getPlayerById(data.playerID);
+    if (player && data.cards.length > 0) {
       // プレイヤーの手札からカードを削除
       player.myCards = player.myCards.filter(card => !data.cards.includes(card));
-      console.log(`Updated hand for player ${data.playerID}:`, player.myCards);
+      player.status = CONSTS.PLAYER_STATUS.WAITING; // プレイヤーステータスを待機に更新
+      //console.log(`Updated hand for player ${data.playerID}:`, player.myCards);
     }
     //出したカードの情報を更新し、全クライアントに送信
     data.cards.forEach(card => {
@@ -171,7 +171,16 @@ io.on("connection", (socket) => {
     io.emit("updateLastUsedCards", JSON.stringify(playData));
     //次のプレイヤーに交代
     GM.advanceToNextPlayer(io);
+  });
 
+  // プレイヤーがパスする時
+  socket.on("playerPass", (playerId) => {
+    console.log("Player passing:", playerId);
+    const player = GM.getPlayerById(playerId);
+    player.status = CONSTS.PLAYER_STATUS.PASSED; // プレイヤーステータスをパスに更新
+    let playData = {playerID: playerId, cards: []};
+    io.emit("updateLastUsedCards", JSON.stringify(playData));
+    GM.advanceToNextPlayer(io);
   });
 
   // ゲームリセット

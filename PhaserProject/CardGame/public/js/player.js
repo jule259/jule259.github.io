@@ -15,7 +15,7 @@ export class Player{
         this.textObj = null; // プレイヤーのテキストオブジェクト
         this.idObj = null; // プレイヤーのIDオブジェクト
         this.playOrder = 0; // プレイヤーの出番
-        this.identity = null; // プレイヤーの役職
+        this.identity = ""; // プレイヤーの役職
     }
 
     // プレーヤのカード情報を取得

@@ -19,7 +19,7 @@ const config = {
     }
 };
 
-var gameStatus = CONSTS.gameStatus.WAITING_FOR_START; // ゲームの初期状態を設定
+//var gameStatus = CONSTS.gameStatus.WAITING_FOR_START; // ゲームの初期状態を設定
 
 
 var game = new Phaser.Game(config);
@@ -27,7 +27,7 @@ var game = new Phaser.Game(config);
 function preload ()
 {
     //カードの正面
-    CONSTS.cardResource.forEach((card) => {
+    CONSTS.CARD_RESOURCE.forEach((card) => {
         this.load.image(card.key, card.path);
     });
 

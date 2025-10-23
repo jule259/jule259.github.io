@@ -1,5 +1,5 @@
 
-export const cardResource = [
+export const CARD_RESOURCE = [
     {key : "10_of_clubs", path : "assets/10_of_clubs.png", value : 10, type: "clubs"},
     {key : "10_of_diamonds", path : "assets/10_of_diamonds.png", value : 10, type: "diamonds"},
     {key : "10_of_hearts", path : "assets/10_of_hearts.png", value : 10, type: "hearts"},
@@ -57,7 +57,7 @@ export const cardResource = [
 ];
 
 //デッキのフィールド
-export const deckField = {
+export const DECK_FIELD = {
     x : 1540,
     y : 30,
     width : 100,
@@ -65,14 +65,14 @@ export const deckField = {
 }
 
 //出したカードのフィールド
-export const usedCardField = {
+export const USED_CARD_FIELD = {
     x : 240,
     y : 200,
     width : 1400,
     height : 300,
 }
 //最新カードフィルド
-export const lastUsedCardField = {
+export const LASTUSED_CARD_FIELD = {
     // x : 50,
     // y : 200,
     // width : 100,
@@ -85,7 +85,7 @@ export const lastUsedCardField = {
 
 
 //左プレーヤーフィールド
-export const leftPlayerField = {
+export const LEFT_PLAYER_FIELD = {
     x : 20,
     y : 200,
     width : 150,
@@ -93,7 +93,7 @@ export const leftPlayerField = {
 }
 
 //右プレーヤーフィールド
-export const rightPlayerField = {
+export const RIGHT_PLAYER_FIELD = {
     x : 1750,
     y : 200,
     width : 150,
@@ -101,7 +101,7 @@ export const rightPlayerField = {
 }
 
 //カード情報
-export const cardInfo = {
+export const CARD_INFO = {
     width : 100,
     height : 145,
 }
@@ -112,13 +112,14 @@ export const gameStatus = {
     GAME_STARTED: "3"
 };
 
-export const playerStatus = {
+export const PLAYER_STATUS = {
     WAITING: "waiting",
     PLAYING: "playing",
+    PASSED: "pass",
     FINISHED: "finished"
 };
 
-export const playerType = {
-    CIVILIAN: "civilian",
-    LANDLORD: "landlord"
+export const PLAYER_TYPE = {
+    CIVILIAN: "平民",
+    LANDLORD: "地主"
 };

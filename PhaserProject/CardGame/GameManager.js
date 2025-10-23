@@ -17,28 +17,33 @@ export class GameManager {
     addPlayer(playerID, socketId) {
         let newplayer = new Player(playerID);
         if (this.players.length === 0) {
-            newplayer.type = "host"; // 最初のプレイヤーはホスト
-            newplayer.status = "playing"; // ホストプレイヤーのステータスをplayingに設定
-            this.hostPlayerID = playerID; // ホストプレイヤーのIDを保存
-            this.hostSocketId = socketId; // ホストプレイヤーのソケットIDを保存
+            newplayer.type = "host";
+            //newplayer.status = CONSTS.PLAYER_STATUS.PLAYING;
+            this.hostPlayerID = playerID;
+            this.hostSocketId = socketId;
+            console.log("Host player set:", playerID);
         }
-        newplayer.socketId = socketId; // ソケットIDを設定
-        newplayer.identity = CONSTS.playerType.CIVILIAN; // 初期の役職をCIVILIANに設定
+        newplayer.socketId = socketId;
+        //newplayer.identity = CONSTS.PLAYER_TYPE.CIVILIAN;
         this.players.push(newplayer);
         this.updateGameState();
     }
 
     addRobotPlayer(playerID) {
         let newRobotPlayer = new Player(playerID);
-        newRobotPlayer.type = "robot"; // ロボットプレイヤーとして設定
-        newRobotPlayer.socketId = ""; // ロボットプレイヤーのソケットIDは空固定
-        newRobotPlayer.identity = CONSTS.playerType.CIVILIAN; // 初期の役職をCIVILIANに設定
+        newRobotPlayer.type = "robot";
+        newRobotPlayer.socketId = "";
+        //newRobotPlayer.identity = CONSTS.PLAYER_TYPE.CIVILIAN;
         this.players.push(newRobotPlayer);
         this.updateGameState();
     }
 
+    getPlayerById(playerId) {
+        return this.players.find(player => player.id == playerId);
+    }
+
     updatePlayerCards(playerId, myCards) {
-        let player = this.players.find(player => player.id === playerId);
+        let player = this.getPlayerById(playerId);
         if (player) {
             player.myCards = myCards; // プレイヤーのカードを更新
             this.updateGameState();
@@ -49,6 +54,11 @@ export class GameManager {
 
     removePlayer(playerId) {
         this.players = this.players.filter(player => player.id !== playerId);
+        this.updateGameState();
+    }
+
+    removeAllPlayers() {
+        this.players = [];
         this.updateGameState();
     }
 
@@ -102,11 +112,11 @@ export class GameManager {
 
     createDeck() {
         //メモリのコピー
-        return JSON.parse(JSON.stringify(CONSTS.cardResource));
+        return JSON.parse(JSON.stringify(CONSTS.CARD_RESOURCE));
     }
 
     playerDrawCard(io, playerId, drawNum) {
-        const player = this.players.find(p => p.id === playerId);
+        const player = this.getPlayerById(playerId);
         if (player) {
             const drawnCards = [];
             for (let i = 0; i < drawNum; i++) {
@@ -130,17 +140,20 @@ export class GameManager {
             return;
         }
         //（仮）ホストプレイヤーを地主に設定
-        const hostPlayer = this.players.find(p => p.id === this.hostPlayerID);
-        if (hostPlayer) {
-            hostPlayer.identity = CONSTS.playerType.LANDLORD;
+        const hostPlayer = this.getPlayerById(this.hostPlayerID);
+        console.log("Host playerID:", this.hostPlayerID);
+        if (!hostPlayer) {
+            console.error("Host player not found! ランドロードの割り当てに失敗したよ！");
+            return;
         }
+        //hostPlayer.identity = CONSTS.PLAYER_TYPE.LANDLORD;
         const landlordIndex = this.players.indexOf(hostPlayer);
 
         // const landlordIndex = Math.floor(Math.random() * this.players.length);
-        this.players[landlordIndex].identity = CONSTS.playerType.LANDLORD;
+        this.players[landlordIndex].identity = CONSTS.PLAYER_TYPE.LANDLORD;
         this.players.forEach((player, index) => {
             if (index !== landlordIndex) {
-                player.identity = CONSTS.playerType.CIVILIAN;
+                player.identity = CONSTS.PLAYER_TYPE.CIVILIAN;
             }
         });
     }
@@ -149,11 +162,11 @@ export class GameManager {
     determinePlayOrder() {
         for (let i = 0; i < this.players.length; i++) {
             this.playOrder.push(this.players[i].id);
-            if (this.players[i].identity === CONSTS.playerType.LANDLORD) {
+            if (this.players[i].identity === CONSTS.PLAYER_TYPE.LANDLORD) {
                 this.playingPlayerIndex = i; // 最初の出番を地主に設定
-                this.players[i].status = "playing"; // 地主のステータスをplayingに設定
+                this.players[i].status = CONSTS.PLAYER_STATUS.PLAYING; // 地主のステータスをplayingに設定
             } else {
-                this.players[i].status = "waiting"; // 他のプレイヤーのステータスをwaitingに設定
+                this.players[i].status = CONSTS.PLAYER_STATUS.WAITING; // 他のプレイヤーのステータスをwaitingに設定
             }
         }
     }
@@ -165,14 +178,18 @@ export class GameManager {
             return;
         }
         this.playingPlayerIndex = (this.playingPlayerIndex + 1) % this.playOrder.length;
+        let playingPlayerId = this.playOrder[this.playingPlayerIndex];
+        const player = this.getPlayerById(playingPlayerId);
+        //次にプレイするプレイヤーのステータスを更新
+        player.status = CONSTS.PLAYER_STATUS.PLAYING;
         // 全プレイヤーのステータスを更新
-        this.players.forEach(player => {
-            if (player.id === this.playOrder[this.playingPlayerIndex]) {
-                player.status = "playing";
-            } else {
-                player.status = "waiting";
-            }
-        });
+        // this.players.forEach(player => {
+        //     if (player.id === this.playOrder[this.playingPlayerIndex]) {
+        //         player.status = CONSTS.PLAYER_STATUS.PLAYING;
+        //     } else {
+        //         player.status = CONSTS.PLAYER_STATUS.WAITING;
+        //     }
+        // });
         // 全プレイヤーの情報を送信
         io.emit("allPlayerInfo", JSON.stringify(this.players));
     }

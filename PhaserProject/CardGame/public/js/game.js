@@ -5,7 +5,7 @@ import * as CMFUNC from './ClientCommon.js';
 let lastUsedCard = null; // 最後に出したカード
 let lastUsedCards =[]; // 最後に出したカードを格納する配列
 let okBtn = null; // OKボタン
-let cancelBtn = null; // キャンセルボタン
+let passBtn = null; // パスボタン
 let deckData = []; // デッキのカードを格納する配列
 // let usedCards = []; // 出したカードの配列
 let myCardsObj = []; // 手札を格納する配列
@@ -110,8 +110,8 @@ export function drawCard(drawNum , player, nowNum = 0 , cardArr = {}, cb = null)
             ease: 'Power2', // イージング
             duration: 100, // 移動にかける時間（ミリ秒）
             onComplete: () => {// 移動完了後に実行される処理
-                //プレーヤー情報を表示
-                showOtherPlayerInfo(player);
+                //プレイヤ情報を再表示
+                showPlayerInfo(player);
                 //再帰処理
                 drawCard(drawNum, player, nowNum + 1, cardArr, cb);
             },
@@ -133,7 +133,7 @@ export function drawCard(drawNum , player, nowNum = 0 , cardArr = {}, cb = null)
         }
 
         //引く枚数より、手札フィルドの幅を計算
-        let myCardFiledWidth = myCardsObj.length * CONSTS.cardInfo.width / 2 ;//手札フィールドの幅
+        let myCardFiledWidth = myCardsObj.length * CONSTS.CARD_INFO.width / 2 ;//手札フィールドの幅
         //手札フィールドの開始座標（x座標）
         let myCardFieldStartX = scene.cameras.main.width / 2 - myCardFiledWidth / 2;
 
@@ -159,7 +159,7 @@ export function drawCard(drawNum , player, nowNum = 0 , cardArr = {}, cb = null)
         //カードを最前面に移動
         scene.children.bringToTop(card);
         //カードを手札に移動する時のX座標を計算(現在手札の一番右のカードのX座標 + 100)
-        let targetX = myCardFieldStartX + (CONSTS.cardInfo.width / 2) * (myCardsObj.length);
+        let targetX = myCardFieldStartX + (CONSTS.CARD_INFO.width / 2) * (myCardsObj.length);
         //カードの正面を表示
         card.setTexture(card.key);
         // カードを引いたときのアニメーション
@@ -191,7 +191,7 @@ function adjustMyCardPosition(cb = null){
     }
 
     //手札フィールドの幅を計算
-    let myCardFiledWidth = myCardsObj.length * CONSTS.cardInfo.width / 2;
+    let myCardFiledWidth = myCardsObj.length * CONSTS.CARD_INFO.width / 2;
     //手札フィールドの開始座標（x座標）
     let myCardFieldStartX = scene.cameras.main.width / 2 - myCardFiledWidth / 2;
     //手札フィルド属性を更新
@@ -205,7 +205,7 @@ function adjustMyCardPosition(cb = null){
     }
 
     for (let i = 0; i < myCardsObj.length; i++) {
-        let targetX = myCardFieldStartX + (CONSTS.cardInfo.width / 2) * i;
+        let targetX = myCardFieldStartX + (CONSTS.CARD_INFO.width / 2) * i;
 
         // アニメーション
         scene.tweens.add({
@@ -288,7 +288,7 @@ function sortCard(cards, sortkey, sortType = "asc") {
 function playCard(){
     const scene = CMFUNC.getScene();
     //自分の状態がWAITINGの場合は何もしない
-    if (CMFUNC.getPlayerMe().status === CONSTS.playerStatus.WAITING) {
+    if (CMFUNC.getPlayerMe().status === CONSTS.PLAYER_STATUS.WAITING) {
         return;
     }
     //選択されたカードがない場合は何もしない
@@ -306,12 +306,12 @@ function playCard(){
     }
     // フィールド内のランダムな位置に移動
     let targetX = Phaser.Math.Between(
-        CONSTS.usedCardField.x + CONSTS.cardInfo.width, //左余白
-        CONSTS.usedCardField.x + CONSTS.usedCardField.width - selectedCards.length * CONSTS.cardInfo.width //右余白
+        CONSTS.USED_CARD_FIELD.x + CONSTS.CARD_INFO.width, //左余白
+        CONSTS.USED_CARD_FIELD.x + CONSTS.USED_CARD_FIELD.width - selectedCards.length * CONSTS.CARD_INFO.width //右余白
     );
     let targetY = Phaser.Math.Between(
-        CONSTS.usedCardField.y + 120, //上余白
-        CONSTS.usedCardField.y + CONSTS.usedCardField.height - 120 //下余白
+        CONSTS.USED_CARD_FIELD.y + 120, //上余白
+        CONSTS.USED_CARD_FIELD.y + CONSTS.USED_CARD_FIELD.height - 120 //下余白
     );
 
     lastUsedCards = [];
@@ -333,13 +333,13 @@ function playCard(){
         //アニメーションを追加
         scene.tweens.add({
             targets: card,
-            x: targetX + i * CONSTS.cardInfo.width, //目標のX座標
+            x: targetX + i * CONSTS.CARD_INFO.width, //目標のX座標
             y: targetY, //目標のY座標
             ease: 'Power2', //イージング
             duration: 500, //移動にかける時間（ミリ秒）
             onComplete: () => {//移動完了後に実行される処理
                 //最後に出したカードを最新カードフィルドに設定
-                lastUsedCard = scene.add.image(CONSTS.lastUsedCardField.x + CONSTS.lastUsedCardField.width / 2, CONSTS.lastUsedCardField.y + CONSTS.lastUsedCardField.height / 2, card.key).setScale(0.2);
+                lastUsedCard = scene.add.image(CONSTS.LASTUSED_CARD_FIELD.x + CONSTS.LASTUSED_CARD_FIELD.width / 2, CONSTS.LASTUSED_CARD_FIELD.y + CONSTS.LASTUSED_CARD_FIELD.height / 2, card.key).setScale(0.2);
                 lastUsedCard.showNo = card.showNo;//表示番号
                 lastUsedCard.key = card.key; // カードのキー
                 lastUsedCard.pointValue = card.pointValue;//カードの値
@@ -348,7 +348,7 @@ function playCard(){
                 lastUsedCards.push(lastUsedCard);
                 if (i === selectedCards.length - 1) {
                     //表示操作用カードを追加
-                    lastUsedCard = scene.add.image(CONSTS.lastUsedCardField.x + CONSTS.lastUsedCardField.width / 2, CONSTS.lastUsedCardField.y + CONSTS.lastUsedCardField.height / 2, card.key).setScale(0.2);
+                    lastUsedCard = scene.add.image(CONSTS.LASTUSED_CARD_FIELD.x + CONSTS.LASTUSED_CARD_FIELD.width / 2, CONSTS.LASTUSED_CARD_FIELD.y + CONSTS.LASTUSED_CARD_FIELD.height / 2, card.key).setScale(0.2);
                     //最後に出したカードのイベントを設定
                     lastUsedCard.setInteractive();
                     lastUsedCard.on('pointerover', () => {//マウスがカードに触れたときのイベント
@@ -356,12 +356,12 @@ function playCard(){
                         lastUsedCards.forEach((lcard) => {
                             lcard.originalX = lcard.x;
                             lcard.originalY = lcard.y;
-                            let cardWidth = lastUsedCards.length * CONSTS.cardInfo.width;
+                            let cardWidth = lastUsedCards.length * CONSTS.CARD_INFO.width;
                             //カードの横位置を調整（アニメーション）
                             scene.tweens.add({
                                 targets: lcard,
-                                x: (CONSTS.lastUsedCardField.x + CONSTS.cardInfo.width * 2) + CONSTS.cardInfo.width / 2 + CONSTS.cardInfo.width * (lcard.showNo - 1),
-                                y: CONSTS.lastUsedCardField.y + CONSTS.lastUsedCardField.height / 2,
+                                x: (CONSTS.LASTUSED_CARD_FIELD.x + CONSTS.CARD_INFO.width * 2) + CONSTS.CARD_INFO.width / 2 + CONSTS.CARD_INFO.width * (lcard.showNo - 1),
+                                y: CONSTS.LASTUSED_CARD_FIELD.y + CONSTS.LASTUSED_CARD_FIELD.height / 2,
                                 ease: 'Power2',
                                 duration: 100,
                             });
@@ -394,8 +394,14 @@ function playCard(){
             },
         });
     }
+}
 
-
+//カードを出さずに終了する
+function playerPass(){
+    const socket = CMFUNC.getSocket();
+    let playerID = CMFUNC.getMyPlayerID();
+    // サーバに出したカードの情報を送信
+    socket.emit("playerPass", playerID);
 }
 
 //カードのタイプを取得
@@ -563,8 +569,8 @@ export function createDeck(deck){
     //デッキのカードを初期化
     deckData = [];
     //デッキのカードを作成
-    let deckField_center_x = CONSTS.deckField.x + CONSTS.deckField.width / 2; //デッキの中心座標（X軸）
-    let deckField_center_y = CONSTS.deckField.y + CONSTS.deckField.height / 2; //デッキの中心座標（Y軸）
+    let deckField_center_x = CONSTS.DECK_FIELD.x + CONSTS.DECK_FIELD.width / 2; //デッキの中心座標（X軸）
+    let deckField_center_y = CONSTS.DECK_FIELD.y + CONSTS.DECK_FIELD.height / 2; //デッキの中心座標（Y軸）
 
     //デッキのカードを追加
     deck.forEach((card) => {
@@ -575,7 +581,7 @@ export function createDeck(deck){
         deckData.push(deckCard);
     });
 
-    // CONSTS.cardResource.forEach((card) => {
+    // CONSTS.CARDRESOURCE.forEach((card) => {
         //     let deckCard = scene.add.image(deckField_center_x, deckField_center_y, "card_back_blue").setScale(0.2);
         //     deckCard.key = card.key;
         //     deckCard.pointValue = card.value;
@@ -606,7 +612,7 @@ export function shuffleDeck(nowNum = 0 ,cb = null){
         }
         return;
     }
-    let targetX = CONSTS.deckField.x + CONSTS.deckField.width;
+    let targetX = CONSTS.DECK_FIELD.x + CONSTS.DECK_FIELD.width;
     //アニメーションを追加
     scene.tweens.add({
         targets: deckData[nowNum],
@@ -634,19 +640,19 @@ export function createField(){
     //フィールドのデザインを設定
     deckGraphics.fillStyle(0x008000, 0.5); //緑色（RGBAで50%の透明度）
     deckGraphics.fillRect(
-        CONSTS.deckField.x,
-        CONSTS.deckField.y,
-        CONSTS.deckField.width,
-        CONSTS.deckField.height
+        CONSTS.DECK_FIELD.x,
+        CONSTS.DECK_FIELD.y,
+        CONSTS.DECK_FIELD.width,
+        CONSTS.DECK_FIELD.height
     );
 
     //フィールドの境界線を描画（任意）
     deckGraphics.lineStyle(2, 0x000000, 1); //黒い線
     deckGraphics.strokeRect(
-        CONSTS.deckField.x,
-        CONSTS.deckField.y,
-        CONSTS.deckField.width,
-        CONSTS.deckField.height
+        CONSTS.DECK_FIELD.x,
+        CONSTS.DECK_FIELD.y,
+        CONSTS.DECK_FIELD.width,
+        CONSTS.DECK_FIELD.height
     );
 
     //**********出したカードのフィールドを作成**********//
@@ -655,19 +661,19 @@ export function createField(){
     //フィールドのデザインを設定
     fieldGraphics.fillStyle(0x008000, 0.5); //緑色（RGBAで50%の透明度）
     fieldGraphics.fillRect(
-        CONSTS.usedCardField.x,
-        CONSTS.usedCardField.y,
-        CONSTS.usedCardField.width,
-        CONSTS.usedCardField.height
+        CONSTS.USED_CARD_FIELD.x,
+        CONSTS.USED_CARD_FIELD.y,
+        CONSTS.USED_CARD_FIELD.width,
+        CONSTS.USED_CARD_FIELD.height
     );
 
     //フィールドの境界線を描画（任意）
     fieldGraphics.lineStyle(2, 0x000000, 1); //黒い線
     fieldGraphics.strokeRect(
-        CONSTS.usedCardField.x,
-        CONSTS.usedCardField.y,
-        CONSTS.usedCardField.width,
-        CONSTS.usedCardField.height
+        CONSTS.USED_CARD_FIELD.x,
+        CONSTS.USED_CARD_FIELD.y,
+        CONSTS.USED_CARD_FIELD.width,
+        CONSTS.USED_CARD_FIELD.height
     );
 
     //**********最後に出したカードのフィールドを作成**********//
@@ -676,19 +682,19 @@ export function createField(){
     //フィールドのデザインを設定
     lastUsedCardFieldGraphics.fillStyle(0x008000, 0.5); //緑色（RGBAで50%の透明度）
     lastUsedCardFieldGraphics.fillRect(
-        CONSTS.lastUsedCardField.x,
-        CONSTS.lastUsedCardField.y,
-        CONSTS.lastUsedCardField.width,
-        CONSTS.lastUsedCardField.height
+        CONSTS.LASTUSED_CARD_FIELD.x,
+        CONSTS.LASTUSED_CARD_FIELD.y,
+        CONSTS.LASTUSED_CARD_FIELD.width,
+        CONSTS.LASTUSED_CARD_FIELD.height
     );
 
     //フィールドの境界線を描画（任意）
     lastUsedCardFieldGraphics.lineStyle(2, 0x000000, 1); //黒い線
     lastUsedCardFieldGraphics.strokeRect(
-        CONSTS.lastUsedCardField.x,
-        CONSTS.lastUsedCardField.y,
-        CONSTS.lastUsedCardField.width,
-        CONSTS.lastUsedCardField.height
+        CONSTS.LASTUSED_CARD_FIELD.x,
+        CONSTS.LASTUSED_CARD_FIELD.y,
+        CONSTS.LASTUSED_CARD_FIELD.width,
+        CONSTS.LASTUSED_CARD_FIELD.height
     );
 
     //**********左プレーヤーのフィルドを作成**********//
@@ -697,19 +703,19 @@ export function createField(){
     //フィールドのデザインを設定
     leftPlayerFieldGraphics.fillStyle(0x000000, 0.5); //RGBAで50%の透明度
     leftPlayerFieldGraphics.fillRect(
-        CONSTS.leftPlayerField.x,
-        CONSTS.leftPlayerField.y,
-        CONSTS.leftPlayerField.width,
-        CONSTS.leftPlayerField.height
+        CONSTS.LEFT_PLAYER_FIELD.x,
+        CONSTS.LEFT_PLAYER_FIELD.y,
+        CONSTS.LEFT_PLAYER_FIELD.width,
+        CONSTS.LEFT_PLAYER_FIELD.height
     );
 
     //フィールドの境界線を描画（任意）
     leftPlayerFieldGraphics.lineStyle(2, 0x000000, 1); //黒い線
     leftPlayerFieldGraphics.strokeRect(
-        CONSTS.leftPlayerField.x,
-        CONSTS.leftPlayerField.y,
-        CONSTS.leftPlayerField.width,
-        CONSTS.leftPlayerField.height
+        CONSTS.LEFT_PLAYER_FIELD.x,
+        CONSTS.LEFT_PLAYER_FIELD.y,
+        CONSTS.LEFT_PLAYER_FIELD.width,
+        CONSTS.LEFT_PLAYER_FIELD.height
     );
 
     //**********右プレーヤーのフィルドを作成**********//
@@ -718,18 +724,18 @@ export function createField(){
     //フィールドのデザインを設定
     rightPlayerFieldGraphics.fillStyle(0x000000, 0.5); //RGBAで50%の透明度
     rightPlayerFieldGraphics.fillRect(
-        CONSTS.rightPlayerField.x,
-        CONSTS.rightPlayerField.y,
-        CONSTS.rightPlayerField.width,
-        CONSTS.rightPlayerField.height
+        CONSTS.RIGHT_PLAYER_FIELD.x,
+        CONSTS.RIGHT_PLAYER_FIELD.y,
+        CONSTS.RIGHT_PLAYER_FIELD.width,
+        CONSTS.RIGHT_PLAYER_FIELD.height
     );
     //フィールドの境界線を描画（任意）
     rightPlayerFieldGraphics.lineStyle(2, 0x000000, 1); //黒い線
     rightPlayerFieldGraphics.strokeRect(
-        CONSTS.rightPlayerField.x,
-        CONSTS.rightPlayerField.y,
-        CONSTS.rightPlayerField.width,
-        CONSTS.rightPlayerField.height
+        CONSTS.RIGHT_PLAYER_FIELD.x,
+        CONSTS.RIGHT_PLAYER_FIELD.y,
+        CONSTS.RIGHT_PLAYER_FIELD.width,
+        CONSTS.RIGHT_PLAYER_FIELD.height
     );
 
 }
@@ -738,10 +744,11 @@ export function createField(){
 function createButton(){
     const scene = CMFUNC.getScene();
     let playerMe = CMFUNC.getPlayerMe();
-    //手札が0枚,または自分が待ち状態の場合、ボタンは作成しない
-    if (myCardsObj.length === 0 || playerMe.status === "waiting") {
+    //手札が0枚,または自分がplayingでない場合、ボタンは作成しない
+    if (myCardsObj.length === 0 || playerMe.status !== CONSTS.PLAYER_STATUS.PLAYING) {
         return;
     }
+    /*** OKボタンの作成 ***/
     //ボタンの位置を計算
     let button_x = myCardField.x + myCardField.width + 50;
     let button_y = myCardField.y - 80;
@@ -751,14 +758,8 @@ function createButton(){
         okBtn.y = button_y;
         return;
     }
-    if (cancelBtn) {
-        cancelBtn.x = button_x + 50;
-        cancelBtn.y = button_y;
-        return;
-    }
     //手札の右上にボタンを作成
-    okBtn = scene.add.image(button_x, button_y, "tick_blue").setScale(0.4).setInteractive();
-    cancelBtn = scene.add.image(button_x + 50, button_y, "cancel_grey").setScale(0.4).setInteractive();
+    okBtn = scene.add.image(button_x, button_y, "tick_blue").setScale(0.5).setInteractive();
     //ボタンのイベント
     okBtn.on(Phaser.Input.Events.POINTER_OVER, () => {
         scene.input.setDefaultCursor("pointer");
@@ -766,16 +767,34 @@ function createButton(){
     okBtn.on(Phaser.Input.Events.POINTER_OUT, () => {
         scene.input.setDefaultCursor("default");
     });
-    cancelBtn.on(Phaser.Input.Events.POINTER_OVER, () => {
-        scene.input.setDefaultCursor("pointer");
-    });
-    cancelBtn.on(Phaser.Input.Events.POINTER_OUT, () => {
-        scene.input.setDefaultCursor("default");
-    });
     okBtn.on(Phaser.Input.Events.POINTER_DOWN, () => {
         //カードを出す
         playCard();
         console.log( "出せるカードの種類" + getPlayableCards(myCardsObj));
+    });
+
+    /*** Passボタンの作成 ***/
+    if(lastUsedCards.length === 0){//最初の出し手の場合、パスボタンは作成しない
+        return;
+    }
+    if (passBtn) {//すでにボタンが存在する場合、位置を更新
+        passBtn.x = button_x + 50;
+        passBtn.y = button_y;
+        return;
+    }
+    button_x = myCardField.x + myCardField.width + 100;
+    button_y = myCardField.y - 80;
+
+    passBtn = scene.add.image(button_x, button_y, "cancel_grey").setScale(0.5).setInteractive();
+    passBtn.on(Phaser.Input.Events.POINTER_OVER, () => {
+        scene.input.setDefaultCursor("pointer");
+    });
+    passBtn.on(Phaser.Input.Events.POINTER_OUT, () => {
+        scene.input.setDefaultCursor("default");
+    });
+    passBtn.on(Phaser.Input.Events.POINTER_DOWN, () => {
+        //カードを出さずに終了する
+        playerPass();
     });
 }
 
@@ -785,9 +804,9 @@ function removeButton(){
         okBtn.destroy();
         okBtn = null;
     }
-    if (cancelBtn) {
-        cancelBtn.destroy();
-        cancelBtn = null;
+    if (passBtn) {
+        passBtn.destroy();
+        passBtn = null;
     }
 }
 
@@ -874,25 +893,35 @@ function getPlayableCards(cards) {
 }
 
 //プレーヤー情報を表示
-function showOtherPlayerInfo(player){
+function showPlayerInfo(player) {
     const scene = CMFUNC.getScene();
     //プレーヤー名を表示
     if (player.idObj) {//テキストが存在する場合、削除
         player.idObj.destroy();
     }
-    player.idObj = scene.add.text(player.position_x, player.position_y - 100, player.id, {
+    var idText = player.id + "(" + player.identity + ")" + " " + player.status;//id + (アイデンティティ) + ステータス
+    var position_y = player.position_y - 100;
+    if (player.id == CMFUNC.getMyPlayerID()) {
+        position_y = player.position_y + 100; // 自分のプレーヤーの場合、名前を下に表示
+    }
+    player.idObj = scene.add.text(player.position_x, position_y, idText, {
         fontSize: '20px',
         fill: '#fff'
     }).setOrigin(0.5);
 
-    //カード枚数を表示
-    if (player.textObj) {//テキストが存在する場合、削除
-        player.textObj.destroy();
+    //自分以外のプレーヤーの場合、カード枚数を表示
+    if (player.id != CMFUNC.getMyPlayerID()) {
+        //カード枚数を表示
+        if (player.textObj) {//テキストが存在する場合、削除
+            player.textObj.destroy();
+        }
+        var cardCountText = "Cards: " + player.myCardsObj.length;
+        player.textObj = scene.add.text(player.position_x, player.position_y + 100, cardCountText, {
+            fontSize: '20px',
+            fill: '#fff'
+        }).setOrigin(0.5);
     }
-    player.textObj = scene.add.text(player.position_x, player.position_y + 100, "Cards: " + player.myCardsObj.length, {
-        fontSize: '20px',
-        fill: '#fff'
-    }).setOrigin(0.5);
+
 }
 
 // ゲーム開始をまつ
@@ -983,16 +1012,16 @@ export function initPlayerInfo(data) {
                 playerLeft.type = player.type;
                 playerLeft.status = player.status;
                 playerLeft.identity = player.identity; // アイデンティティを設定
-                playerLeft.position_x = CONSTS.leftPlayerField.x + CONSTS.leftPlayerField.width / 2;
-                playerLeft.position_y = CONSTS.leftPlayerField.y + CONSTS.leftPlayerField.height / 2;
+                playerLeft.position_x = CONSTS.LEFT_PLAYER_FIELD.x + CONSTS.LEFT_PLAYER_FIELD.width / 2;
+                playerLeft.position_y = CONSTS.LEFT_PLAYER_FIELD.y + CONSTS.LEFT_PLAYER_FIELD.height / 2;
                 players.push(playerLeft);
             } else if (!playerRight) {//右側のプレーヤー
                 playerRight = new Player(player.id);
                 playerRight.type = player.type;
                 playerRight.status = player.status;
                 playerRight.identity = player.identity; // アイデンティティを設定
-                playerRight.position_x = CONSTS.rightPlayerField.x + CONSTS.rightPlayerField.width / 2;
-                playerRight.position_y = CONSTS.rightPlayerField.y + CONSTS.rightPlayerField.height / 2;
+                playerRight.position_x = CONSTS.RIGHT_PLAYER_FIELD.x + CONSTS.RIGHT_PLAYER_FIELD.width / 2;
+                playerRight.position_y = CONSTS.RIGHT_PLAYER_FIELD.y + CONSTS.RIGHT_PLAYER_FIELD.height / 2;
                 players.push(playerRight);
             } else {
                 //それ以外のプレーヤーは無視
@@ -1023,11 +1052,14 @@ export function updatePlayerInfo(data){
                 playerMe.myCards = playerData.myCards;
                 CMFUNC.setPlayerMe(playerMe);
             }
+            //プレーヤー情報を表示
+            showPlayerInfo(player);
         }
     });
-    // 自分のプレーヤーがwaiting状態の場合、OKボタンを削除
+
+    // 自分のプレーヤーがplaying状態でない場合、ボタンを削除
     playerMe = CMFUNC.getPlayerMe();
-    if (playerMe.status === "waiting") {
+    if (playerMe.status != CONSTS.PLAYER_STATUS.PLAYING) {
         removeButton();
     } else {
         createButton();
@@ -1039,6 +1071,12 @@ export function updateLastUsedCards(data) {
     const scene = CMFUNC.getScene();
     let playData = JSON.parse(data);
     const playerID = playData.playerID;
+
+    //カードデータが空の場合、プレイヤーがパスしたと判断する
+    if (playData.cards.length === 0) {
+        console.log(`Player ${playData.playerID} passed their turn.`);
+        return;
+    }
     if(playerID === CMFUNC.getMyPlayerID()){//カードを出したプレーヤが自分の場合、何もしない
         return;
     }
@@ -1050,12 +1088,12 @@ export function updateLastUsedCards(data) {
 
     // フィールド内のランダムな位置に移動
     let targetX = Phaser.Math.Between(
-        CONSTS.usedCardField.x + CONSTS.cardInfo.width, //左余白
-        CONSTS.usedCardField.x + CONSTS.usedCardField.width - selectedCards.length * CONSTS.cardInfo.width //右余白
+        CONSTS.USED_CARD_FIELD.x + CONSTS.CARD_INFO.width,
+        CONSTS.USED_CARD_FIELD.x + CONSTS.USED_CARD_FIELD.width - selectedCards.length * CONSTS.CARD_INFO.width
     );
     let targetY = Phaser.Math.Between(
-        CONSTS.usedCardField.y + 120, //上余白
-        CONSTS.usedCardField.y + CONSTS.usedCardField.height - 120 //下余白
+        CONSTS.USED_CARD_FIELD.y + 120,
+        CONSTS.USED_CARD_FIELD.y + CONSTS.USED_CARD_FIELD.height - 120
     );
     //場に出すカードを生成
     let playedCards = [];
@@ -1082,13 +1120,13 @@ export function updateLastUsedCards(data) {
         //アニメーションを追加
         scene.tweens.add({
             targets: card,
-            x: targetX + i * CONSTS.cardInfo.width, //目標のX座標
+            x: targetX + i * CONSTS.CARD_INFO.width, //目標のX座標
             y: targetY, //目標のY座標
             ease: 'Power2', //イージング
             duration: 500, //移動にかける時間（ミリ秒）
             onComplete: () => {
                 //最後に出したカードを最新カードフィルドに設定
-                let lastUsedCard = scene.add.image(CONSTS.lastUsedCardField.x + CONSTS.lastUsedCardField.width / 2, CONSTS.lastUsedCardField.y + CONSTS.lastUsedCardField.height / 2, card.key).setScale(0.2);
+                let lastUsedCard = scene.add.image(CONSTS.LASTUSED_CARD_FIELD.x + CONSTS.LASTUSED_CARD_FIELD.width / 2, CONSTS.LASTUSED_CARD_FIELD.y + CONSTS.LASTUSED_CARD_FIELD.height / 2, card.key).setScale(0.2);
                 lastUsedCard.showNo = card.showNo;//表示番号
                 lastUsedCard.key = card.key; // カードのキー
                 lastUsedCard.pointValue = card.pointValue;//カードの値
@@ -1097,7 +1135,7 @@ export function updateLastUsedCards(data) {
                 lastUsedCards.push(lastUsedCard);
                  if (i === playedCards.length - 1) {//最後のカードの場合
                     //表示操作用カードを追加
-                    lastUsedCard = scene.add.image(CONSTS.lastUsedCardField.x + CONSTS.lastUsedCardField.width / 2, CONSTS.lastUsedCardField.y + CONSTS.lastUsedCardField.height / 2, card.key).setScale(0.2);
+                    lastUsedCard = scene.add.image(CONSTS.LASTUSED_CARD_FIELD.x + CONSTS.LASTUSED_CARD_FIELD.width / 2, CONSTS.LASTUSED_CARD_FIELD.y + CONSTS.LASTUSED_CARD_FIELD.height / 2, card.key).setScale(0.2);
                     //最後に出したカードのイベントを設定
                     lastUsedCard.setInteractive();
                     lastUsedCard.on('pointerover', () => {//マウスがカードに触れたときのイベント
@@ -1109,8 +1147,8 @@ export function updateLastUsedCards(data) {
                             //カードの横位置を調整（アニメーション）
                             scene.tweens.add({
                                 targets: lcard,
-                                x: (CONSTS.lastUsedCardField.x + CONSTS.cardInfo.width * 2) + CONSTS.cardInfo.width / 2 + CONSTS.cardInfo.width * (lcard.showNo - 1),
-                                y: CONSTS.lastUsedCardField.y + CONSTS.lastUsedCardField.height / 2,
+                                x: (CONSTS.LASTUSED_CARD_FIELD.x + CONSTS.CARD_INFO.width * 2) + CONSTS.CARD_INFO.width / 2 + CONSTS.CARD_INFO.width * (lcard.showNo - 1),
+                                y: CONSTS.LASTUSED_CARD_FIELD.y + CONSTS.LASTUSED_CARD_FIELD.height / 2,
                                 ease: 'Power2',
                                 duration: 100,
                             });
