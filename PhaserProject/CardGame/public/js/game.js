@@ -184,11 +184,11 @@ export function drawCard(drawNum , player, nowNum = 0 , cardArr = {}, cb = null)
 //手札のカードの位置を再調整する
 function adjustMyCardPosition(cb = null){
     const scene = CMFUNC.getScene();
-    if  (myCardsObj.length === 0) {
-        //ボタンを作成
-        createButton();
-        return;
-    }
+    // if  (myCardsObj.length === 0) {
+    //     //ボタンを作成
+    //     createButton();
+    //     return;
+    // }
 
     //手札フィールドの幅を計算
     let myCardFiledWidth = myCardsObj.length * CONSTS.CARD_INFO.width / 2;
@@ -354,8 +354,8 @@ function playCard(){
                     lastUsedCard.on('pointerover', () => {//マウスがカードに触れたときのイベント
                         //最後の一回で出した全てのカードをポップアップで表示
                         lastUsedCards.forEach((lcard) => {
-                            lcard.originalX = lcard.x;
-                            lcard.originalY = lcard.y;
+                            lcard.originalX = CONSTS.LASTUSED_CARD_FIELD.x + CONSTS.LASTUSED_CARD_FIELD.width / 2;
+                            lcard.originalY = CONSTS.LASTUSED_CARD_FIELD.y + CONSTS.LASTUSED_CARD_FIELD.height / 2;
                             let cardWidth = lastUsedCards.length * CONSTS.CARD_INFO.width;
                             //カードの横位置を調整（アニメーション）
                             scene.tweens.add({
@@ -752,50 +752,48 @@ function createButton(){
     //ボタンの位置を計算
     let button_x = myCardField.x + myCardField.width + 50;
     let button_y = myCardField.y - 80;
-    //すでにボタンが存在する場合、位置を更新
-    if (okBtn) {
+    if (okBtn) {//すでにボタンが存在する場合、位置を更新
         okBtn.x = button_x;
         okBtn.y = button_y;
-        return;
+    } else {//ボタンが存在しない場合、新ボタンを作成
+        //手札の右上にボタンを作成
+        okBtn = scene.add.image(button_x, button_y, "tick_blue").setScale(0.5).setInteractive();
+        //ボタンのイベント
+        okBtn.on(Phaser.Input.Events.POINTER_OVER, () => {
+            scene.input.setDefaultCursor("pointer");
+        });
+        okBtn.on(Phaser.Input.Events.POINTER_OUT, () => {
+            scene.input.setDefaultCursor("default");
+        });
+        okBtn.on(Phaser.Input.Events.POINTER_DOWN, () => {
+            //カードを出す
+            playCard();
+            console.log( "出せるカードの種類" + getPlayableCards(myCardsObj));
+        });
     }
-    //手札の右上にボタンを作成
-    okBtn = scene.add.image(button_x, button_y, "tick_blue").setScale(0.5).setInteractive();
-    //ボタンのイベント
-    okBtn.on(Phaser.Input.Events.POINTER_OVER, () => {
-        scene.input.setDefaultCursor("pointer");
-    });
-    okBtn.on(Phaser.Input.Events.POINTER_OUT, () => {
-        scene.input.setDefaultCursor("default");
-    });
-    okBtn.on(Phaser.Input.Events.POINTER_DOWN, () => {
-        //カードを出す
-        playCard();
-        console.log( "出せるカードの種類" + getPlayableCards(myCardsObj));
-    });
 
     /*** Passボタンの作成 ***/
     if(lastUsedCards.length === 0){//最初の出し手の場合、パスボタンは作成しない
         return;
     }
+    button_x = myCardField.x + myCardField.width + 100;
+    button_y = myCardField.y - 80;
     if (passBtn) {//すでにボタンが存在する場合、位置を更新
         passBtn.x = button_x + 50;
         passBtn.y = button_y;
-        return;
+    } else {//ボタンが存在しない場合、新ボタンを作成
+        passBtn = scene.add.image(button_x, button_y, "cancel_grey").setScale(0.5).setInteractive();
+        passBtn.on(Phaser.Input.Events.POINTER_OVER, () => {
+            scene.input.setDefaultCursor("pointer");
+        });
+        passBtn.on(Phaser.Input.Events.POINTER_OUT, () => {
+            scene.input.setDefaultCursor("default");
+        });
+        passBtn.on(Phaser.Input.Events.POINTER_DOWN, () => {
+            //カードを出さずに終了する
+            playerPass();
+        });
     }
-    button_x = myCardField.x + myCardField.width + 100;
-    button_y = myCardField.y - 80;
-
-    passBtn = scene.add.image(button_x, button_y, "cancel_grey").setScale(0.5).setInteractive();
-    passBtn.on(Phaser.Input.Events.POINTER_OVER, () => {
-        scene.input.setDefaultCursor("pointer");
-    });
-    passBtn.on(Phaser.Input.Events.POINTER_OUT, () => {
-        scene.input.setDefaultCursor("default");
-    });
-    passBtn.on(Phaser.Input.Events.POINTER_DOWN, () => {
-        //カードを出さずに終了する
-        playerPass();
-    });
 }
 
 //OKボタンを削除
@@ -1141,8 +1139,8 @@ export function updateLastUsedCards(data) {
                     lastUsedCard.on('pointerover', () => {//マウスがカードに触れたときのイベント
                         //最後の一回で出した全てのカードをポップアップで表示
                         lastUsedCards.forEach((lcard) => {
-                            lcard.originalX = lcard.x;
-                            lcard.originalY = lcard.y;
+                            lcard.originalX = CONSTS.LASTUSED_CARD_FIELD.x + CONSTS.LASTUSED_CARD_FIELD.width / 2;
+                            lcard.originalY = CONSTS.LASTUSED_CARD_FIELD.y + CONSTS.LASTUSED_CARD_FIELD.height / 2;
                             //let cardWidth = lastUsedCards.length * CONSTS.cardInfo.width;
                             //カードの横位置を調整（アニメーション）
                             scene.tweens.add({
